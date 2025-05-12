@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { ChakraProvider, Box, Container } from '@chakra-ui/react';
+
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import { ChakraProvider, Container, Box, VStack, Heading, Button, HStack } from '@chakra-ui/react';
+import { ArrowBackIcon } from '@chakra-ui/icons';
+
 import { extendTheme } from '@chakra-ui/react';
 import Login from './components/Login';
 import Register from './components/Register';
 import PhotoGame from './components/PhotoGame';
 import GameSelector from './components/GameSelector';
+import LocationExplorer from './components/LocationExplorer';
 import { gameTypes } from './data/gameTypes';
 
 const theme = extendTheme({
@@ -55,6 +59,12 @@ const GameRoute = ({ onGameComplete, onLogout }) => {
 function App() {
   const [user, setUser] = useState(null);
   const [completedGames, setCompletedGames] = useState([]);
+  const [selectedGame, setSelectedGame] = useState(null);
+  const [completedGames, setCompletedGames] = useState(() => {
+    const saved = localStorage.getItem('completedGames');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [currentView, setCurrentView] = useState('home'); // 'home', 'game', or 'explorer'
 
   useEffect(() => {
     // Check for existing user session
@@ -151,6 +161,87 @@ function App() {
       }
     } catch (error) {
       console.error('Error updating game progress:', error);
+
+  const handleBackToHome = () => {
+    setSelectedGame(null);
+    setCurrentView('home');
+  };
+
+  const renderContent = () => {
+    switch (currentView) {
+      case 'game':
+        return selectedGame ? (
+          <VStack spacing={6} align="stretch">
+            <Button
+              leftIcon={<ArrowBackIcon />}
+              onClick={handleBackToHome}
+              colorScheme="gray"
+              size="sm"
+              width="fit-content"
+            >
+              Back to Home
+            </Button>
+            <PhotoGame 
+              gameData={selectedGame}
+              onGameComplete={() => handleGameComplete(selectedGame.id)}
+            />
+          </VStack>
+        ) : (
+          <GameSelector 
+            games={gameTypes}
+            onSelectGame={(game) => {
+              setSelectedGame(game);
+              setCurrentView('game');
+            }}
+            completedGames={completedGames}
+          />
+        );
+      case 'explorer':
+        return (
+          <VStack spacing={6} align="stretch">
+            <Button
+              leftIcon={<ArrowBackIcon />}
+              onClick={handleBackToHome}
+              colorScheme="gray"
+              size="sm"
+              width="fit-content"
+            >
+              Back to Home
+            </Button>
+            <LocationExplorer />
+          </VStack>
+        );
+      default:
+        return (
+          <VStack spacing={8}>
+            <HStack spacing={4}>
+              <Button
+                colorScheme="purple"
+                size="lg"
+                onClick={() => setCurrentView('game')}
+              >
+                Photo Challenge
+              </Button>
+              <Button
+                colorScheme="cyan"
+                size="lg"
+                onClick={() => setCurrentView('explorer')}
+              >
+                Location Explorer
+              </Button>
+            </HStack>
+            {currentView === 'game' && (
+              <GameSelector 
+                games={gameTypes}
+                onSelectGame={(game) => {
+                  setSelectedGame(game);
+                  setCurrentView('game');
+                }}
+                completedGames={completedGames}
+              />
+            )}
+          </VStack>
+        );
     }
   };
 
