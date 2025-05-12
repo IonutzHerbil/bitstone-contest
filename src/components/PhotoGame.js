@@ -11,18 +11,16 @@ import {
   useToast,
   Button,
 } from '@chakra-ui/react';
-import { getAllLocations } from '../data/locations';
 import ImageUploader from './ImageUploader';
 
-const PhotoGame = () => {
+const PhotoGame = ({ gameData, onGameComplete }) => {
   const [score, setScore] = useState(0);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [completedLocations, setCompletedLocations] = useState([]);
   const [gameStarted, setGameStarted] = useState(false);
   const toast = useToast();
 
-  const locations = getAllLocations();
-  const totalPoints = locations.reduce((sum, loc) => sum + loc.points, 0);
+  const totalPoints = gameData.locations.reduce((sum, loc) => sum + loc.points, 0);
 
   useEffect(() => {
     if (gameStarted && !currentLocation) {
@@ -31,19 +29,20 @@ const PhotoGame = () => {
   }, [gameStarted, currentLocation]);
 
   const selectNewLocation = () => {
-    const remainingLocations = locations.filter(
+    const remainingLocations = gameData.locations.filter(
       loc => !completedLocations.includes(loc.id)
     );
     
     if (remainingLocations.length === 0) {
       toast({
         title: "Congratulations!",
-        description: `You've completed all locations with ${score} points!`,
+        description: `You've completed ${gameData.name} with ${score} points!`,
         status: "success",
         duration: null,
         isClosable: true,
       });
       setGameStarted(false);
+      onGameComplete();
       return;
     }
 
@@ -108,7 +107,7 @@ const PhotoGame = () => {
             <VStack align="center">
               <Text color="gray.400">Progress</Text>
               <Progress
-                value={(completedLocations.length / locations.length) * 100}
+                value={(completedLocations.length / gameData.locations.length) * 100}
                 width="100%"
                 colorScheme="cyan"
                 borderRadius="full"
@@ -127,11 +126,17 @@ const PhotoGame = () => {
       {!gameStarted ? (
         <VStack spacing={4}>
           <Heading size="md" textAlign="center">
-            Welcome to Cluj-Napoca Photo Challenge!
+            {gameData.name}
           </Heading>
           <Text textAlign="center" color="gray.300">
-            Visit famous locations around Cluj-Napoca, take photos, and earn points!
+            {gameData.description}
           </Text>
+          <Badge colorScheme={
+            gameData.difficulty.toLowerCase() === 'easy' ? 'green' :
+            gameData.difficulty.toLowerCase() === 'medium' ? 'yellow' : 'red'
+          }>
+            {gameData.difficulty} Difficulty
+          </Badge>
           <Button
             colorScheme="cyan"
             size="lg"
@@ -139,7 +144,7 @@ const PhotoGame = () => {
             _hover={{ transform: 'scale(1.05)' }}
             transition="all 0.2s"
           >
-            Start Game
+            Start Challenge
           </Button>
         </VStack>
       ) : currentLocation ? (
