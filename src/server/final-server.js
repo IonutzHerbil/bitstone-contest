@@ -24,6 +24,12 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Make sure API key is configured
+if (!process.env.OPENAI_API_KEY) {
+  console.error('ERROR: OpenAI API key is not configured in .env file');
+  process.exit(1);
+}
+
 // Helper function to encode image to base64
 function encodeImage(imageBuffer) {
   return imageBuffer.toString('base64');
