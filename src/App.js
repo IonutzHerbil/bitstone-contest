@@ -1,8 +1,7 @@
 import React from 'react';
-import { ChakraProvider, Container, VStack, Heading, Box } from '@chakra-ui/react';
+import { ChakraProvider, Container, Box } from '@chakra-ui/react';
 import { extendTheme } from '@chakra-ui/react';
-import ImageUploader from './components/ImageUploader';
-import LocationDisplay from './components/LocationDisplay';
+import PhotoGame from './components/PhotoGame';
 
 const theme = extendTheme({
   config: {
@@ -33,18 +32,7 @@ function App() {
     <ChakraProvider theme={theme}>
       <Box minH="100vh" bg="black" color="white">
         <Container maxW="container.md" py={8}>
-          <VStack spacing={8}>
-            <Heading 
-              bgGradient="linear(to-r, cyan.400, purple.500)" 
-              bgClip="text" 
-              fontSize={["2xl", "3xl"]}
-              fontWeight="extrabold"
-            >
-              Cluj-Napoca Landmark Detector
-            </Heading>
-            <ImageUploader />
-            <LocationDisplay />
-          </VStack>
+          <PhotoGame />
         </Container>
       </Box>
     </ChakraProvider>

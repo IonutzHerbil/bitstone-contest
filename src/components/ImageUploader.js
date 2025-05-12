@@ -4,16 +4,17 @@ import {
   Button,
   VStack,
   Image,
-  Text,
   useToast,
   Progress,
+  HStack,
+  IconButton,
 } from '@chakra-ui/react';
+import { DeleteIcon } from '@chakra-ui/icons';
 import axios from 'axios';
 
-const ImageUploader = () => {
+const ImageUploader = ({ onPhotoAnalyzed }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [analysis, setAnalysis] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef(null);
   const toast = useToast();
@@ -23,8 +24,27 @@ const ImageUploader = () => {
     if (file) {
       setSelectedImage(file);
       setPreviewUrl(URL.createObjectURL(file));
-      setAnalysis('');
     }
+  };
+
+  const handleDeleteImage = () => {
+    // Clean up the object URL to prevent memory leaks
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    setSelectedImage(null);
+    setPreviewUrl(null);
+    // Reset the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    
+    toast({
+      title: 'Photo deleted',
+      status: 'info',
+      duration: 2000,
+      isClosable: true,
+    });
   };
 
   const uploadImage = async () => {
@@ -41,15 +61,8 @@ const ImageUploader = () => {
     setIsLoading(true);
 
     try {
-      // Get current location
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject);
-      });
-
       const formData = new FormData();
       formData.append('image', selectedImage);
-      formData.append('latitude', position.coords.latitude);
-      formData.append('longitude', position.coords.longitude);
 
       const response = await axios.post('http://localhost:5000/api/analyze-image', formData, {
         headers: {
@@ -57,14 +70,13 @@ const ImageUploader = () => {
         },
       });
 
-      setAnalysis(response.data.analysis);
+      // Clear the image after successful upload
+      handleDeleteImage();
       
-      toast({
-        title: 'Image analyzed successfully',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
+      // Call the callback with the analysis
+      if (onPhotoAnalyzed) {
+        onPhotoAnalyzed(response.data.analysis);
+      }
     } catch (error) {
       console.error('Error uploading image:', error);
       toast({
@@ -95,11 +107,12 @@ const ImageUploader = () => {
         _hover={{ transform: 'scale(1.05)' }}
         transition="all 0.2s"
       >
-        Select Image
+        Take Photo
       </Button>
       
       {previewUrl && (
         <Box 
+          position="relative"
           maxW="400px" 
           w="100%" 
           borderRadius="xl" 
@@ -112,6 +125,18 @@ const ImageUploader = () => {
             borderRadius="xl" 
             objectFit="cover"
           />
+          <IconButton
+            icon={<DeleteIcon />}
+            colorScheme="red"
+            size="sm"
+            position="absolute"
+            top={2}
+            right={2}
+            onClick={handleDeleteImage}
+            aria-label="Delete photo"
+            _hover={{ transform: 'scale(1.1)' }}
+            transition="all 0.2s"
+          />
         </Box>
       )}
 
@@ -121,11 +146,11 @@ const ImageUploader = () => {
           size="lg"
           onClick={uploadImage}
           isLoading={isLoading}
-          loadingText="Analyzing..."
+          loadingText="Verifying..."
           _hover={{ transform: 'scale(1.05)' }}
           transition="all 0.2s"
         >
-          Analyze Image
+          Verify Photo
         </Button>
       )}
 
@@ -136,18 +161,6 @@ const ImageUploader = () => {
           width="100%" 
           colorScheme="purple"
         />
-      )}
-
-      {analysis && (
-        <Box 
-          p={6} 
-          borderRadius="xl" 
-          bg="gray.800" 
-          width="100%"
-          boxShadow="0 0 20px rgba(128, 90, 213, 0.2)"
-        >
-          <Text fontSize="lg" lineHeight="tall">{analysis}</Text>
-        </Box>
       )}
     </VStack>
   );
