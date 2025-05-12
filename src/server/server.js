@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const { OpenAI } = require('openai');
-const path = require('path');
 const dotenv = require('dotenv');
 
 dotenv.config();
@@ -32,12 +31,9 @@ app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
     // Convert the buffer to base64
     const base64Image = req.file.buffer.toString('base64');
 
-    // Get location data from request
-    const { latitude, longitude } = req.body;
-
     // Call OpenAI API to analyze the image
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4-vision-preview",
       messages: [
         {
           role: "user",
@@ -62,11 +58,7 @@ app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
     });
 
     res.json({
-      analysis: response.choices[0].message.content,
-      location: {
-        latitude,
-        longitude,
-      },
+      analysis: response.choices[0].message.content
     });
   } catch (error) {
     console.error('Error analyzing image:', error);
