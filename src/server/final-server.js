@@ -21,7 +21,7 @@ const upload = multer({ storage: storage });
 
 // Initialize OpenAI
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || "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",
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 // Helper function to encode image to base64
