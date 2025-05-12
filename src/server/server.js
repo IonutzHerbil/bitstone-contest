@@ -12,7 +12,7 @@ dotenv.config();
 console.log('OpenAI API Key configured:', !!process.env.OPENAI_API_KEY);
 
 const app = express();
-const port = 5001;
+const port = 5000;
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI, {
@@ -78,7 +78,7 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
       console.log('Using model:', "gpt-4-vision");
       // Call OpenAI API to analyze the image
       const response = await openai.chat.completions.create({
-        model: "gpt-4-vision",
+        model: "gpt-4o",
         messages: [
           {
             role: "user",

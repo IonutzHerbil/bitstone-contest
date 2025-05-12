@@ -10,6 +10,7 @@ import {
   TabPanels,
   Tab,
   TabPanel,
+  Container,
 } from '@chakra-ui/react';
 import ImageUploader from './ImageUploader';
 import LocationDisplay from './LocationDisplay';
@@ -62,50 +63,88 @@ const LocationExplorer = () => {
   };
 
   return (
-    <Box w="100%">
+    <Container maxW="container.xl">
       <VStack spacing={8} align="stretch">
-        <Heading 
-          size="lg" 
-          textAlign="center"
-          bgGradient="linear(to-r, cyan.400, purple.500)"
-          bgClip="text"
+        <Box textAlign="center">
+          <Heading 
+            size="xl"
+            mb={4}
+          >
+            Location Explorer
+          </Heading>
+          <Text fontSize="lg" color="gray.400">
+            Upload a photo of any landmark to discover its location and learn more about it
+          </Text>
+        </Box>
+
+        <Box
+          bg="gray.800"
+          borderRadius="xl"
+          p={6}
+          boxShadow="0 0 20px rgba(0, 255, 255, 0.1)"
+          borderWidth="1px"
+          borderColor="transparent"
+          _hover={{
+            boxShadow: "0 0 30px rgba(0, 255, 255, 0.2)",
+          }}
+          transition="all 0.3s"
         >
-          Location Explorer
-        </Heading>
-        
-        <Text textAlign="center" color="gray.400">
-          Upload a photo of any landmark to discover its location and learn more about it
-        </Text>
+          <Tabs 
+            isFitted 
+            variant="enclosed" 
+            colorScheme="cyan"
+            borderRadius="xl"
+            overflow="hidden"
+          >
+            <TabList mb={4}>
+              <Tab 
+                _selected={{ 
+                  color: 'white',
+                  bg: 'cyan.500',
+                  borderColor: 'cyan.500',
+                }}
+                borderRadius="lg"
+                mx={1}
+              >
+                Explore
+              </Tab>
+              <Tab 
+                _selected={{ 
+                  color: 'white',
+                  bg: 'purple.500',
+                  borderColor: 'purple.500',
+                }}
+                borderRadius="lg"
+                mx={1}
+              >
+                My Collection
+              </Tab>
+            </TabList>
 
-        <Tabs isFitted variant="enclosed" colorScheme="purple">
-          <TabList>
-            <Tab>Explore</Tab>
-            <Tab>My Collection</Tab>
-          </TabList>
-
-          <TabPanels>
-            <TabPanel>
-              <VStack spacing={6}>
-                <ImageUploader 
-                  onUpload={handleImageUpload} 
-                  isLoading={isLoading}
-                />
-                {detectedLocation && (
-                  <LocationDisplay 
-                    location={detectedLocation}
-                    showSaveButton={true}
+            <TabPanels>
+              <TabPanel>
+                <VStack spacing={8}>
+                  <ImageUploader 
+                    onUpload={handleImageUpload} 
+                    isLoading={isLoading}
                   />
-                )}
-              </VStack>
-            </TabPanel>
-            
-            <TabPanel>
-              <LocationCollection />
-            </TabPanel>
-          </TabPanels>
-        </Tabs>
+                  {detectedLocation && (
+                    <LocationDisplay 
+                      location={detectedLocation}
+                      showSaveButton={true}
+                    />
+                  )}
+                </VStack>
+              </TabPanel>
+              
+              <TabPanel>
+                <LocationCollection />
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
+        </Box>
       </VStack>
-    </Box>
+    </Container>
   );
 };
 

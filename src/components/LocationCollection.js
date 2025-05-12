@@ -16,8 +16,10 @@ import {
   ModalCloseButton,
   useDisclosure,
   Textarea,
+  Heading,
+  HStack,
 } from '@chakra-ui/react';
-import { DeleteIcon, EditIcon, ExternalLinkIcon } from '@chakra-ui/icons';
+import { DeleteIcon, EditIcon, ExternalLinkIcon, InfoIcon } from '@chakra-ui/icons';
 
 const LocationCollection = () => {
   const [savedLocations, setSavedLocations] = useState(() => {
@@ -91,8 +93,18 @@ const LocationCollection = () => {
 
   if (savedLocations.length === 0) {
     return (
-      <VStack spacing={4} p={4}>
-        <Text color="gray.500">No saved locations yet. Start exploring to add some!</Text>
+      <VStack 
+        spacing={4} 
+        p={8}
+        bg="gray.800"
+        borderRadius="xl"
+        borderWidth="1px"
+        borderColor="gray.700"
+      >
+        <InfoIcon boxSize={8} color="gray.500" />
+        <Text color="gray.400" fontSize="lg" textAlign="center">
+          No saved locations yet. Start exploring to add some!
+        </Text>
       </VStack>
     );
   }
@@ -103,10 +115,17 @@ const LocationCollection = () => {
         {savedLocations.map((location) => (
           <Box
             key={location.id}
-            borderWidth="1px"
-            borderRadius="lg"
-            overflow="hidden"
             bg="gray.800"
+            borderRadius="xl"
+            overflow="hidden"
+            borderWidth="1px"
+            borderColor="transparent"
+            boxShadow="0 0 20px rgba(0, 255, 255, 0.1)"
+            _hover={{
+              transform: 'translateY(-5px)',
+              boxShadow: '0 0 30px rgba(0, 255, 255, 0.2)',
+            }}
+            transition="all 0.3s"
           >
             <Image
               src={location.imageUrl}
@@ -115,25 +134,37 @@ const LocationCollection = () => {
               h="200px"
               w="100%"
             />
-            <Box p={4}>
-              <Text fontWeight="bold" mb={2}>{location.name}</Text>
+            <VStack spacing={4} p={4} align="stretch">
+              <Heading size="md" bgGradient="linear(to-r, cyan.400, purple.500)" bgClip="text">
+                {location.name}
+              </Heading>
               {location.notes && (
-                <Text fontSize="sm" color="gray.400" mb={2} noOfLines={2}>
-                  {location.notes}
-                </Text>
+                <Box bg="gray.700" p={3} borderRadius="lg">
+                  <Text fontSize="sm" color="gray.300">
+                    {location.notes}
+                  </Text>
+                </Box>
               )}
-              <Box display="flex" justifyContent="space-between" mt={2}>
+              <HStack spacing={2} justify="space-between">
                 <IconButton
                   icon={<EditIcon />}
                   onClick={() => handleEditNotes(location)}
                   size="sm"
                   variant="ghost"
+                  colorScheme="cyan"
+                  _hover={{
+                    bg: 'rgba(0, 255, 255, 0.1)',
+                  }}
                 />
                 <IconButton
                   icon={<ExternalLinkIcon />}
                   onClick={() => handleShare(location)}
                   size="sm"
                   variant="ghost"
+                  colorScheme="purple"
+                  _hover={{
+                    bg: 'rgba(128, 90, 213, 0.1)',
+                  }}
                 />
                 <IconButton
                   icon={<DeleteIcon />}
@@ -141,27 +172,45 @@ const LocationCollection = () => {
                   size="sm"
                   variant="ghost"
                   colorScheme="red"
+                  _hover={{
+                    bg: 'rgba(255, 0, 0, 0.1)',
+                  }}
                 />
-              </Box>
-            </Box>
+              </HStack>
+            </VStack>
           </Box>
         ))}
       </SimpleGrid>
 
       <Modal isOpen={isOpen} onClose={onClose}>
-        <ModalOverlay />
-        <ModalContent bg="gray.800">
-          <ModalHeader>Edit Notes</ModalHeader>
+        <ModalOverlay backdropFilter="blur(10px)" />
+        <ModalContent bg="gray.800" borderRadius="xl">
+          <ModalHeader 
+            bgGradient="linear(to-r, cyan.400, purple.500)"
+            bgClip="text"
+          >
+            Edit Notes
+          </ModalHeader>
           <ModalCloseButton />
           <ModalBody pb={6}>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Add your notes about this location..."
-              size="sm"
+              size="md"
               resize="vertical"
+              bg="gray.700"
+              border="none"
+              _focus={{
+                boxShadow: '0 0 0 2px rgba(0, 255, 255, 0.2)',
+              }}
+              mb={4}
             />
-            <Button colorScheme="purple" mt={4} onClick={saveNotes}>
+            <Button 
+              colorScheme="cyan"
+              onClick={saveNotes}
+              w="100%"
+            >
               Save Notes
             </Button>
           </ModalBody>

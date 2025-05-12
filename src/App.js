@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { ChakraProvider, Container, Box, VStack, Heading, Button, HStack } from '@chakra-ui/react';
+import { ChakraProvider, Container, Box, VStack, Heading, Button, HStack, Text } from '@chakra-ui/react';
 import { ArrowBackIcon } from '@chakra-ui/icons';
 
 import { extendTheme } from '@chakra-ui/react';
@@ -23,6 +23,20 @@ const theme = extendTheme({
         bg: 'black',
         color: 'white',
       },
+      '@keyframes pulse': {
+        '0%': {
+          transform: 'scale(1)',
+          opacity: 0.8,
+        },
+        '70%': {
+          transform: 'scale(2)',
+          opacity: 0,
+        },
+        '100%': {
+          transform: 'scale(2.5)',
+          opacity: 0,
+        },
+      },
     },
   },
   components: {
@@ -31,6 +45,62 @@ const theme = extendTheme({
         maxW: 'container.xl',
         px: [4, 6],
         py: [6, 8],
+      },
+    },
+    Button: {
+      baseStyle: {
+        fontWeight: 'semibold',
+        borderRadius: 'lg',
+        _hover: {
+          transform: 'translateY(-2px)',
+          boxShadow: '0 4px 12px rgba(0, 255, 255, 0.3)',
+        },
+        transition: 'all 0.2s',
+      },
+      variants: {
+        solid: {
+          bg: 'cyan.400',
+          color: 'white',
+          _hover: {
+            bg: 'cyan.500',
+          },
+        },
+        outline: {
+          borderColor: 'cyan.400',
+          color: 'cyan.400',
+          _hover: {
+            bg: 'rgba(0, 255, 255, 0.1)',
+          },
+        },
+      },
+    },
+    Heading: {
+      baseStyle: {
+        bgGradient: 'linear(to-r, cyan.400, purple.500)',
+        bgClip: 'text',
+        letterSpacing: 'tight',
+      },
+    },
+    Box: {
+      baseStyle: {
+        borderRadius: 'xl',
+        transition: 'all 0.2s',
+      },
+    },
+    Card: {
+      baseStyle: {
+        container: {
+          bg: 'gray.800',
+          borderRadius: 'xl',
+          borderWidth: '1px',
+          borderColor: 'transparent',
+          overflow: 'hidden',
+          transition: 'all 0.2s',
+          _hover: {
+            transform: 'translateY(-5px)',
+            boxShadow: '0 0 20px rgba(0, 255, 255, 0.2)',
+          },
+        },
       },
     },
   },
@@ -58,7 +128,6 @@ const GameRoute = ({ onGameComplete, onLogout }) => {
 
 function App() {
   const [user, setUser] = useState(null);
-  const [completedGames, setCompletedGames] = useState([]);
   const [selectedGame, setSelectedGame] = useState(null);
   const [completedGames, setCompletedGames] = useState(() => {
     const saved = localStorage.getItem('completedGames');
@@ -161,6 +230,8 @@ function App() {
       }
     } catch (error) {
       console.error('Error updating game progress:', error);
+    }
+  };
 
   const handleBackToHome = () => {
     setSelectedGame(null);
@@ -183,7 +254,7 @@ function App() {
             </Button>
             <PhotoGame 
               gameData={selectedGame}
-              onGameComplete={() => handleGameComplete(selectedGame.id)}
+              onGameComplete={() => handleGameCompletion(selectedGame.id)}
             />
           </VStack>
         ) : (
@@ -219,15 +290,122 @@ function App() {
                 colorScheme="purple"
                 size="lg"
                 onClick={() => setCurrentView('game')}
+                position="relative"
+                overflow="hidden"
+                _before={{
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  bgGradient: 'linear(to-r, purple.600, pink.500)',
+                  borderRadius: 'lg',
+                  transition: 'all 0.3s',
+                }}
+                _hover={{
+                  transform: 'translateY(-5px)',
+                  _before: {
+                    filter: 'brightness(1.2)',
+                  },
+                }}
+                _active={{
+                  transform: 'scale(0.95)',
+                }}
+                px={8}
+                py={6}
               >
-                Photo Challenge
+                <Box
+                  position="relative"
+                  zIndex={1}
+                  display="flex"
+                  alignItems="center"
+                  gap={2}
+                >
+                  <Text fontSize="xl" fontWeight="bold">
+                    Photo Challenge
+                  </Text>
+                  <Box
+                    as="span"
+                    className="pulse"
+                    position="absolute"
+                    top="-10px"
+                    right="-20px"
+                    width="12px"
+                    height="12px"
+                    borderRadius="full"
+                    bg="pink.400"
+                    _after={{
+                      content: '""',
+                      position: 'absolute',
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: 'full',
+                      animation: 'pulse 2s infinite',
+                      bg: 'pink.400',
+                    }}
+                  />
+                </Box>
               </Button>
               <Button
                 colorScheme="cyan"
                 size="lg"
                 onClick={() => setCurrentView('explorer')}
+                position="relative"
+                overflow="hidden"
+                _before={{
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: '100%',
+                  bgGradient: 'linear(to-r, cyan.400, blue.500)',
+                  borderRadius: 'lg',
+                  transition: 'all 0.3s',
+                }}
+                _hover={{
+                  transform: 'translateY(-5px)',
+                  _before: {
+                    filter: 'brightness(1.2)',
+                  },
+                }}
+                _active={{
+                  transform: 'scale(0.95)',
+                }}
+                px={8}
+                py={6}
               >
-                Location Explorer
+                <Box
+                  position="relative"
+                  zIndex={1}
+                  display="flex"
+                  alignItems="center"
+                  gap={2}
+                >
+                  <Text fontSize="xl" fontWeight="bold">
+                    Location Explorer
+                  </Text>
+                  <Box
+                    as="span"
+                    position="absolute"
+                    top="-10px"
+                    right="-20px"
+                    width="12px"
+                    height="12px"
+                    borderRadius="full"
+                    bg="blue.400"
+                    _after={{
+                      content: '""',
+                      position: 'absolute',
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: 'full',
+                      animation: 'pulse 2s infinite',
+                      bg: 'blue.400',
+                    }}
+                  />
+                </Box>
               </Button>
             </HStack>
             {currentView === 'game' && (
@@ -275,11 +453,140 @@ function App() {
               element={
                 user ? (
                   <Container maxW="container.xl" py={8}>
-                    <GameSelector
-                      games={gameTypes}
-                      completedGames={completedGames}
-                      onLogout={handleLogout}
-                    />
+                    <VStack spacing={8}>
+                      <HStack spacing={4}>
+                        <Button
+                          colorScheme="purple"
+                          size="lg"
+                          onClick={() => setCurrentView('game')}
+                          position="relative"
+                          overflow="hidden"
+                          _before={{
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            bgGradient: 'linear(to-r, purple.600, pink.500)',
+                            borderRadius: 'lg',
+                            transition: 'all 0.3s',
+                          }}
+                          _hover={{
+                            transform: 'translateY(-5px)',
+                            _before: {
+                              filter: 'brightness(1.2)',
+                            },
+                          }}
+                          _active={{
+                            transform: 'scale(0.95)',
+                          }}
+                          px={8}
+                          py={6}
+                        >
+                          <Box
+                            position="relative"
+                            zIndex={1}
+                            display="flex"
+                            alignItems="center"
+                            gap={2}
+                          >
+                            <Text fontSize="xl" fontWeight="bold">
+                              Photo Challenge
+                            </Text>
+                            <Box
+                              as="span"
+                              className="pulse"
+                              position="absolute"
+                              top="-10px"
+                              right="-20px"
+                              width="12px"
+                              height="12px"
+                              borderRadius="full"
+                              bg="pink.400"
+                              _after={{
+                                content: '""',
+                                position: 'absolute',
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: 'full',
+                                animation: 'pulse 2s infinite',
+                                bg: 'pink.400',
+                              }}
+                            />
+                          </Box>
+                        </Button>
+                        <Button
+                          colorScheme="cyan"
+                          size="lg"
+                          onClick={() => setCurrentView('explorer')}
+                          position="relative"
+                          overflow="hidden"
+                          _before={{
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            bgGradient: 'linear(to-r, cyan.400, blue.500)',
+                            borderRadius: 'lg',
+                            transition: 'all 0.3s',
+                          }}
+                          _hover={{
+                            transform: 'translateY(-5px)',
+                            _before: {
+                              filter: 'brightness(1.2)',
+                            },
+                          }}
+                          _active={{
+                            transform: 'scale(0.95)',
+                          }}
+                          px={8}
+                          py={6}
+                        >
+                          <Box
+                            position="relative"
+                            zIndex={1}
+                            display="flex"
+                            alignItems="center"
+                            gap={2}
+                          >
+                            <Text fontSize="xl" fontWeight="bold">
+                              Location Explorer
+                            </Text>
+                            <Box
+                              as="span"
+                              position="absolute"
+                              top="-10px"
+                              right="-20px"
+                              width="12px"
+                              height="12px"
+                              borderRadius="full"
+                              bg="blue.400"
+                              _after={{
+                                content: '""',
+                                position: 'absolute',
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: 'full',
+                                animation: 'pulse 2s infinite',
+                                bg: 'blue.400',
+                              }}
+                            />
+                          </Box>
+                        </Button>
+                      </HStack>
+                      {currentView === 'game' ? (
+                        <GameSelector
+                          games={gameTypes}
+                          completedGames={completedGames}
+                          onLogout={handleLogout}
+                        />
+                      ) : currentView === 'explorer' ? (
+                        <LocationExplorer />
+                      ) : null}
+                    </VStack>
                   </Container>
                 ) : (
                   <Navigate to="/login" replace />
