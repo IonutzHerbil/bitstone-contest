@@ -80,7 +80,7 @@ const ImageUploader = () => {
   };
 
   return (
-    <VStack spacing={4} width="100%">
+    <VStack spacing={6} width="100%">
       <input
         type="file"
         accept="image/*"
@@ -89,34 +89,64 @@ const ImageUploader = () => {
         style={{ display: 'none' }}
       />
       <Button
-        colorScheme="blue"
+        colorScheme="cyan"
+        size="lg"
         onClick={() => fileInputRef.current.click()}
+        _hover={{ transform: 'scale(1.05)' }}
+        transition="all 0.2s"
       >
         Select Image
       </Button>
       
       {previewUrl && (
-        <Box maxW="400px" w="100%">
-          <Image src={previewUrl} alt="Preview" borderRadius="md" />
+        <Box 
+          maxW="400px" 
+          w="100%" 
+          borderRadius="xl" 
+          overflow="hidden"
+          boxShadow="0 0 20px rgba(0, 255, 255, 0.2)"
+        >
+          <Image 
+            src={previewUrl} 
+            alt="Preview" 
+            borderRadius="xl" 
+            objectFit="cover"
+          />
         </Box>
       )}
 
       {selectedImage && (
         <Button
-          colorScheme="green"
+          colorScheme="purple"
+          size="lg"
           onClick={uploadImage}
           isLoading={isLoading}
           loadingText="Analyzing..."
+          _hover={{ transform: 'scale(1.05)' }}
+          transition="all 0.2s"
         >
           Analyze Image
         </Button>
       )}
 
-      {isLoading && <Progress size="xs" isIndeterminate width="100%" />}
+      {isLoading && (
+        <Progress 
+          size="xs" 
+          isIndeterminate 
+          width="100%" 
+          colorScheme="purple"
+        />
+      )}
 
       {analysis && (
-        <Box p={4} borderRadius="md" bg="gray.50" width="100%">
-          <Text>{analysis}</Text>
+        <Box 
+          p={6} 
+          borderRadius="xl" 
+          bg="gray.800" 
+          width="100%"
+          boxShadow="0 0 20px rgba(128, 90, 213, 0.2)"
+        >
+          <Text fontSize="lg" lineHeight="tall">{analysis}</Text>
         </Box>
       )}
     </VStack>

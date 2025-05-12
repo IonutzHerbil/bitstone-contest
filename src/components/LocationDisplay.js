@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, VStack, Badge } from '@chakra-ui/react';
+import { Box, Text, VStack, Badge, Flex, Icon } from '@chakra-ui/react';
+import { MdLocationOn } from 'react-icons/md';
 
 const LocationDisplay = () => {
   const [location, setLocation] = useState(null);
@@ -24,19 +25,34 @@ const LocationDisplay = () => {
   }, []);
 
   return (
-    <Box p={4} borderRadius="md" bg="gray.50" width="100%">
-      <VStack align="start" spacing={2}>
-        <Text fontWeight="bold">Your Current Location:</Text>
+    <Box 
+      p={6} 
+      borderRadius="xl" 
+      bg="gray.800" 
+      width="100%"
+      boxShadow="0 0 20px rgba(0, 255, 255, 0.2)"
+    >
+      <VStack align="start" spacing={3}>
+        <Flex align="center" gap={2}>
+          <Icon as={MdLocationOn} w={6} h={6} color="cyan.400" />
+          <Text fontWeight="bold" fontSize="lg">Your Current Location</Text>
+        </Flex>
         {location ? (
           <>
-            <Badge colorScheme="green">Location Access Granted</Badge>
-            <Text>Latitude: {location.latitude.toFixed(6)}</Text>
-            <Text>Longitude: {location.longitude.toFixed(6)}</Text>
+            <Badge colorScheme="cyan" px={3} py={1} borderRadius="full">
+              Location Access Granted
+            </Badge>
+            <Box>
+              <Text color="gray.300">Latitude: <Text as="span" color="white" fontWeight="semibold">{location.latitude.toFixed(6)}</Text></Text>
+              <Text color="gray.300">Longitude: <Text as="span" color="white" fontWeight="semibold">{location.longitude.toFixed(6)}</Text></Text>
+            </Box>
           </>
         ) : error ? (
-          <Badge colorScheme="red">{error}</Badge>
+          <Badge colorScheme="red" px={3} py={1} borderRadius="full">
+            {error}
+          </Badge>
         ) : (
-          <Text>Loading location...</Text>
+          <Text color="gray.400">Loading location...</Text>
         )}
       </VStack>
     </Box>
