@@ -6,13 +6,13 @@ import {
   Image,
   useToast,
   Progress,
-  HStack,
   IconButton,
 } from '@chakra-ui/react';
 import { DeleteIcon } from '@chakra-ui/icons';
 import axios from 'axios';
+import config from '../config';
 
-const ImageUploader = ({ onPhotoAnalyzed }) => {
+const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,13 +28,11 @@ const ImageUploader = ({ onPhotoAnalyzed }) => {
   };
 
   const handleDeleteImage = () => {
-    // Clean up the object URL to prevent memory leaks
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
     }
     setSelectedImage(null);
     setPreviewUrl(null);
-    // Reset the file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -64,23 +62,25 @@ const ImageUploader = ({ onPhotoAnalyzed }) => {
       const formData = new FormData();
       formData.append('image', selectedImage);
 
-      const response = await axios.post('http://localhost:5000/api/analyze-image', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      // Clear the image after successful upload
-      handleDeleteImage();
-      
-      // Call the callback with the analysis
-      if (onPhotoAnalyzed) {
+      // If onUpload is provided, use it for Location Explorer
+      if (onUpload) {
+        await onUpload(selectedImage);
+      } 
+      // Otherwise use analyze-image endpoint for Photo Challenge
+      else if (onPhotoAnalyzed) {
+        const response = await axios.post(`${config.apiBaseUrl}/api/analyze-image`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
         onPhotoAnalyzed(response.data.analysis);
       }
+
+      handleDeleteImage();
     } catch (error) {
       console.error('Error uploading image:', error);
       toast({
-        title: 'Error analyzing image',
+        title: 'Error processing image',
         description: error.message,
         status: 'error',
         duration: 3000,
@@ -145,16 +145,16 @@ const ImageUploader = ({ onPhotoAnalyzed }) => {
           colorScheme="purple"
           size="lg"
           onClick={uploadImage}
-          isLoading={isLoading}
-          loadingText="Verifying..."
+          isLoading={isLoading || externalLoading}
+          loadingText="Processing..."
           _hover={{ transform: 'scale(1.05)' }}
           transition="all 0.2s"
         >
-          Verify Photo
+          {onUpload ? 'Detect Location' : 'Verify Photo'}
         </Button>
       )}
 
-      {isLoading && (
+      {(isLoading || externalLoading) && (
         <Progress 
           size="xs" 
           isIndeterminate 
