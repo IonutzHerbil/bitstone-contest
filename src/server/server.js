@@ -3,11 +3,21 @@ const cors = require('cors');
 const multer = require('multer');
 const { OpenAI } = require('openai');
 const dotenv = require('dotenv');
+const mongoose = require('mongoose');
+const authRoutes = require('./routes/auth');
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 5000;
+
+// Connect to MongoDB
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+.then(() => console.log('Connected to MongoDB'))
+.catch((error) => console.error('MongoDB connection error:', error));
 
 app.use(cors());
 app.use(express.json());
@@ -21,6 +31,9 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+// Authentication routes
+app.use('/api/auth', authRoutes);
+
 // Endpoint to handle image upload and analysis
 app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
   try {
@@ -33,7 +46,7 @@ app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
 
     // Call OpenAI API to analyze the image
     const response = await openai.chat.completions.create({
-      model: "gpt-4-vision-preview",
+      model: "gpt-4o",
       messages: [
         {
           role: "user",
