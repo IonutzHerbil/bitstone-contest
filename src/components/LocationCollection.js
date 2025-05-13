@@ -18,8 +18,11 @@ import {
   Textarea,
   Heading,
   HStack,
+  Badge,
+  Tooltip,
 } from '@chakra-ui/react';
-import { DeleteIcon, EditIcon, ExternalLinkIcon, InfoIcon } from '@chakra-ui/icons';
+import { DeleteIcon, EditIcon, InfoIcon } from '@chakra-ui/icons';
+import { FaShare } from 'react-icons/fa';
 
 const LocationCollection = () => {
   const [savedLocations, setSavedLocations] = useState(() => {
@@ -46,14 +49,14 @@ const LocationCollection = () => {
 
   const handleEditNotes = (location) => {
     setSelectedLocation(location);
-    setNotes(location.notes || '');
+    setNotes(location.userNotes || '');
     onOpen();
   };
 
   const saveNotes = () => {
     setSavedLocations(savedLocations.map(loc => 
       loc.id === selectedLocation.id 
-        ? { ...loc, notes } 
+        ? { ...loc, userNotes: notes } 
         : loc
     ));
     onClose();
@@ -67,15 +70,17 @@ const LocationCollection = () => {
   const handleShare = async (location) => {
     try {
       const shareData = {
-        title: 'Check out this location!',
-        text: `I discovered ${location.name} using Location Explorer!`,
-        url: `${window.location.origin}/share/${location.id}`,
+        title: 'Check out this landmark!',
+        text: `I discovered ${location.name} in ${location.location} using Cluj Explorer!`,
+        url: window.location.href,
       };
       
       if (navigator.share) {
         await navigator.share(shareData);
       } else {
-        await navigator.clipboard.writeText(shareData.url);
+        await navigator.clipboard.writeText(
+          `${shareData.text}\n\nRead more about it: ${shareData.url}`
+        );
         toast({
           title: 'Link copied to clipboard!',
           status: 'success',
@@ -96,13 +101,14 @@ const LocationCollection = () => {
       <VStack 
         spacing={4} 
         p={8}
-        bg="gray.800"
+        bg="background.secondary"
         borderRadius="xl"
         borderWidth="1px"
-        borderColor="gray.700"
+        borderColor="rgba(0, 178, 255, 0.1)"
+        boxShadow="0 0 20px rgba(0, 178, 255, 0.05)"
       >
-        <InfoIcon boxSize={8} color="gray.500" />
-        <Text color="gray.400" fontSize="lg" textAlign="center">
+        <InfoIcon boxSize={8} color="accent.primary" opacity={0.6} />
+        <Text color="whiteAlpha.800" fontSize="lg" textAlign="center">
           No saved locations yet. Start exploring to add some!
         </Text>
       </VStack>
@@ -115,67 +121,100 @@ const LocationCollection = () => {
         {savedLocations.map((location) => (
           <Box
             key={location.id}
-            bg="gray.800"
+            bg="background.secondary"
             borderRadius="xl"
             overflow="hidden"
             borderWidth="1px"
-            borderColor="transparent"
-            boxShadow="0 0 20px rgba(0, 255, 255, 0.1)"
+            borderColor="rgba(0, 178, 255, 0.1)"
+            boxShadow="0 0 20px rgba(0, 178, 255, 0.1)"
             _hover={{
               transform: 'translateY(-5px)',
-              boxShadow: '0 0 30px rgba(0, 255, 255, 0.2)',
+              boxShadow: '0 0 30px rgba(0, 178, 255, 0.2)',
             }}
             transition="all 0.3s"
           >
-            <Image
-              src={location.imageUrl}
-              alt={location.name}
-              objectFit="cover"
-              h="200px"
-              w="100%"
-            />
+            <Box position="relative">
+              <Image
+                src={location.imageUrl}
+                alt={location.name}
+                objectFit="cover"
+                h="200px"
+                w="100%"
+              />
+              <Badge 
+                position="absolute" 
+                top={3} 
+                right={3}
+                colorScheme="purple"
+                borderRadius="full"
+                py={1}
+                px={3}
+                boxShadow="0 2px 8px rgba(0,0,0,0.4)"
+              >
+                {location.location}
+              </Badge>
+            </Box>
+            
             <VStack spacing={4} p={4} align="stretch">
-              <Heading size="md" bgGradient="linear(to-r, cyan.400, purple.500)" bgClip="text">
+              <Heading 
+                size="md" 
+                bgGradient="linear(to-r, accent.primary, accent.secondary)" 
+                bgClip="text"
+                letterSpacing="tight"
+              >
                 {location.name}
               </Heading>
-              {location.notes && (
-                <Box bg="gray.700" p={3} borderRadius="lg">
-                  <Text fontSize="sm" color="gray.300">
-                    {location.notes}
+              
+              {location.userNotes && (
+                <Box bg="rgba(0, 178, 255, 0.05)" p={3} borderRadius="lg" borderLeft="3px solid" borderColor="accent.primary">
+                  <Text fontSize="sm" color="whiteAlpha.800">
+                    {location.userNotes}
                   </Text>
                 </Box>
               )}
+              
               <HStack spacing={2} justify="space-between">
-                <IconButton
-                  icon={<EditIcon />}
-                  onClick={() => handleEditNotes(location)}
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="cyan"
-                  _hover={{
-                    bg: 'rgba(0, 255, 255, 0.1)',
-                  }}
-                />
-                <IconButton
-                  icon={<ExternalLinkIcon />}
-                  onClick={() => handleShare(location)}
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="purple"
-                  _hover={{
-                    bg: 'rgba(128, 90, 213, 0.1)',
-                  }}
-                />
-                <IconButton
-                  icon={<DeleteIcon />}
-                  onClick={() => handleDelete(location.id)}
-                  size="sm"
-                  variant="ghost"
-                  colorScheme="red"
-                  _hover={{
-                    bg: 'rgba(255, 0, 0, 0.1)',
-                  }}
-                />
+                <Tooltip label="Edit notes">
+                  <IconButton
+                    icon={<EditIcon />}
+                    onClick={() => handleEditNotes(location)}
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="cyan"
+                    _hover={{
+                      bg: 'rgba(0, 178, 255, 0.1)',
+                    }}
+                    aria-label="Edit notes"
+                  />
+                </Tooltip>
+                
+                <Tooltip label="Share location">
+                  <IconButton
+                    icon={<FaShare />}
+                    onClick={() => handleShare(location)}
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="purple"
+                    _hover={{
+                      bg: 'rgba(121, 40, 202, 0.1)',
+                    }}
+                    aria-label="Share location"
+                  />
+                </Tooltip>
+                
+                <Tooltip label="Delete location">
+                  <IconButton
+                    icon={<DeleteIcon />}
+                    onClick={() => handleDelete(location.id)}
+                    size="sm"
+                    variant="ghost"
+                    colorScheme="red"
+                    _hover={{
+                      bg: 'rgba(255, 0, 0, 0.1)',
+                    }}
+                    aria-label="Delete location"
+                  />
+                </Tooltip>
               </HStack>
             </VStack>
           </Box>
@@ -184,9 +223,15 @@ const LocationCollection = () => {
 
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay backdropFilter="blur(10px)" />
-        <ModalContent bg="gray.800" borderRadius="xl">
+        <ModalContent 
+          bg="background.secondary" 
+          borderRadius="xl"
+          borderWidth="1px"
+          borderColor="rgba(0, 178, 255, 0.1)"
+          boxShadow="0 0 30px rgba(0, 0, 0, 0.5)"
+        >
           <ModalHeader 
-            bgGradient="linear(to-r, cyan.400, purple.500)"
+            bgGradient="linear(to-r, accent.primary, accent.secondary)"
             bgClip="text"
           >
             Edit Notes
@@ -199,15 +244,17 @@ const LocationCollection = () => {
               placeholder="Add your notes about this location..."
               size="md"
               resize="vertical"
-              bg="gray.700"
-              border="none"
+              bg="background.tertiary"
+              borderColor="rgba(0, 178, 255, 0.2)"
               _focus={{
-                boxShadow: '0 0 0 2px rgba(0, 255, 255, 0.2)',
+                borderColor: "accent.primary",
+                boxShadow: '0 0 0 1px rgba(0, 178, 255, 0.5)',
               }}
               mb={4}
+              minH="150px"
             />
             <Button 
-              colorScheme="cyan"
+              variant="primary"
               onClick={saveNotes}
               w="100%"
             >

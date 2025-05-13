@@ -14,6 +14,7 @@ import {
   InputLeftElement,
 } from '@chakra-ui/react';
 import { FaUser, FaLock, FaEnvelope } from 'react-icons/fa';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
 const Register = ({ onRegister }) => {
   const [username, setUsername] = useState('');
@@ -21,36 +22,46 @@ const Register = ({ onRegister }) => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const toast = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, email, password }),
-      });
+      // Simple client-side mock registration
+      if (username && email && password) {
+        // In a real app, this would be sent to a server
+        const mockUser = {
+          id: Date.now().toString(),
+          username,
+          email,
+          gameProgress: []
+        };
 
-      const data = await response.json();
+        const mockToken = 'mock-jwt-token-' + Math.random().toString(36).substring(2);
+        
+        // Store the mock data
+        localStorage.setItem('token', mockToken);
+        localStorage.setItem('user', JSON.stringify(mockUser));
+        
+        setTimeout(() => {
+          // Call the onRegister callback with our mock user data
+          onRegister(mockUser);
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Registration failed');
+          toast({
+            title: 'Registration successful',
+            description: `Welcome, ${username}!`,
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+          });
+          
+          navigate('/');
+        }, 800); // Small delay to simulate network request
+      } else {
+        throw new Error('Please fill out all required fields');
       }
-
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      onRegister(data.user);
-
-      toast({
-        title: 'Registration successful',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
     } catch (error) {
       toast({
         title: 'Error',
@@ -59,7 +70,6 @@ const Register = ({ onRegister }) => {
         duration: 3000,
         isClosable: true,
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -134,7 +144,7 @@ const Register = ({ onRegister }) => {
             borderBottom="1px solid"
             borderColor="whiteAlpha.100"
           >
-            Join the photo challenge community
+            Join the Cluj-Napoca explorer community
           </Text>
 
           <form onSubmit={handleSubmit}>
@@ -177,7 +187,7 @@ const Register = ({ onRegister }) => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
+                    placeholder="Your email address"
                     bg="gray.900"
                     border="1px solid"
                     borderColor="whiteAlpha.200"
@@ -250,8 +260,9 @@ const Register = ({ onRegister }) => {
           <Text mt={6} color="gray.400" fontSize="sm" textAlign="center">
             Already have an account?{' '}
             <Link 
+              as={RouterLink}
+              to="/login"
               color="cyan.400" 
-              href="/login"
               position="relative"
               _hover={{
                 color: "cyan.300",
@@ -275,6 +286,9 @@ const Register = ({ onRegister }) => {
             >
               Sign In
             </Link>
+          </Text>
+          <Text color="gray.500" fontSize="xs" textAlign="center" mt={2}>
+            For demo purposes, any details will work
           </Text>
         </VStack>
       </Box>

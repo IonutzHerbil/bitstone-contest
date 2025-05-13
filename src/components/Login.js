@@ -14,42 +14,54 @@ import {
   InputLeftElement,
 } from '@chakra-ui/react';
 import { FaUser, FaLock } from 'react-icons/fa';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
 const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const toast = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ username, password }),
-      });
+      // Simple client-side mock login
+      if (username && password) {
+        // For demo purposes, we're accepting any username/password
+        // In a real app, this would verify against a server
+        const mockUser = {
+          id: '1',
+          username,
+          email: `${username}@example.com`,
+          gameProgress: []
+        };
 
-      const data = await response.json();
+        const mockToken = 'mock-jwt-token-' + Math.random().toString(36).substring(2);
+        
+        // Store the mock data just like a real login would
+        localStorage.setItem('token', mockToken);
+        localStorage.setItem('user', JSON.stringify(mockUser));
+        
+        setTimeout(() => {
+          // Call the onLogin callback with our mock user data
+          onLogin(mockUser);
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+          toast({
+            title: 'Login successful',
+            description: `Welcome back, ${username}!`,
+            status: 'success',
+            duration: 3000,
+            isClosable: true,
+          });
+          
+          navigate('/');
+        }, 800); // Small delay to simulate network request
+      } else {
+        throw new Error('Please enter both username and password');
       }
-
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-      onLogin(data.user);
-
-      toast({
-        title: 'Login successful',
-        status: 'success',
-        duration: 3000,
-        isClosable: true,
-      });
     } catch (error) {
       toast({
         title: 'Error',
@@ -58,7 +70,6 @@ const Login = ({ onLogin }) => {
         duration: 3000,
         isClosable: true,
       });
-    } finally {
       setIsLoading(false);
     }
   };
@@ -98,6 +109,7 @@ const Login = ({ onLogin }) => {
         opacity={0.5}
         pointerEvents="none"
       />
+      
       <Box
         p={8}
         maxWidth="400px"
@@ -166,6 +178,7 @@ const Login = ({ onLogin }) => {
                   />
                 </InputGroup>
               </FormControl>
+              
               <FormControl isRequired>
                 <FormLabel color="gray.300" fontSize="sm" fontWeight="medium">Password</FormLabel>
                 <InputGroup>
@@ -221,8 +234,9 @@ const Login = ({ onLogin }) => {
           <Text mt={6} color="gray.400" fontSize="sm" textAlign="center">
             Don't have an account?{' '}
             <Link 
+              as={RouterLink}
+              to="/register"
               color="cyan.400" 
-              href="/register"
               position="relative"
               _hover={{
                 color: "cyan.300",
@@ -246,6 +260,9 @@ const Login = ({ onLogin }) => {
             >
               Sign Up
             </Link>
+          </Text>
+          <Text color="gray.500" fontSize="xs" textAlign="center" mt={2}>
+            Enter any username and password to login
           </Text>
         </VStack>
       </Box>
