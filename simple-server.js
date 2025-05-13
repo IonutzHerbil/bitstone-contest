@@ -3,7 +3,54 @@ const cors = require('cors');
 const multer = require('multer');
 const { OpenAI } = require('openai');
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
+// Custom function to load .env with space handling
+function loadEnvVars() {
+  const envPath = path.resolve(process.cwd(), '.env');
+  const envVars = {};
+  
+  try {
+    // Try to read as UTF-16LE (Little Endian)
+    const buffer = fs.readFileSync(envPath);
+    
+    // Check for UTF-16 BOM (Byte Order Mark)
+    const isUtf16le = buffer.length >= 2 && buffer[0] === 0xFF && buffer[1] === 0xFE;
+    
+    // Convert buffer to string with appropriate encoding
+    const content = isUtf16le 
+      ? buffer.toString('utf16le') 
+      : buffer.toString('utf8');
+    
+    // Process the content line by line
+    content.split('\n').forEach(line => {
+      line = line.trim();
+      if (!line || line.startsWith('#')) return;
+      
+      // Split by the first = sign
+      const separatorIndex = line.indexOf('=');
+      if (separatorIndex > 0) {
+        const key = line.substring(0, separatorIndex).trim();
+        const value = line.substring(separatorIndex + 1).trim();
+        envVars[key] = value;
+      }
+    });
+    
+    console.log('Environment variables loaded successfully');
+    console.log('Found variables:', Object.keys(envVars));
+    console.log('OPENAI_API_KEY found:', !!envVars.OPENAI_API_KEY);
+    if (envVars.OPENAI_API_KEY) {
+      console.log('API Key starts with:', envVars.OPENAI_API_KEY.substring(0, 10) + '...');
+    }
+    return envVars;
+  } catch (error) {
+    console.error('Error loading .env file:', error.message);
+    return {};
+  }
+}
+
+const envVars = loadEnvVars();
 const app = express();
 const port = 5000;
 
@@ -14,9 +61,9 @@ app.use(express.json());
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Initialize OpenAI with direct API key
+// Initialize OpenAI with API key from .env
 const openai = new OpenAI({
-  apiKey: "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"
+  apiKey: envVars.OPENAI_API_KEY
 });
 
 // Helper function to get coordinates from location name
