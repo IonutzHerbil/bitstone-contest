@@ -221,11 +221,53 @@ const LocationDisplay = ({ location, showSaveButton = false }) => {
               <Box bg="gray.700" p={4} borderRadius="lg">
                 <HStack spacing={3} mb={3}>
                   <InfoIcon color="cyan.400" />
-                  <Text fontWeight="semibold">Enhanced Description</Text>
+                  <Text fontWeight="semibold">Full Description</Text>
                 </HStack>
-                <Text color="gray.300" whiteSpace="pre-wrap">
-                  {location.enhancedDescription || "No enhanced description available."}
-                </Text>
+                <VStack align="stretch" spacing={4}>
+                  {location.description && (
+                    <Box>
+                      <Text color="gray.300" whiteSpace="pre-wrap" lineHeight="1.7">
+                        {location.description}
+                      </Text>
+                    </Box>
+                  )}
+                  
+                  {location.enhancedDescription && (
+                    <Box mt={4}>
+                      <Text color="gray.300" whiteSpace="pre-wrap" lineHeight="1.7">
+                        {location.enhancedDescription}
+                      </Text>
+                    </Box>
+                  )}
+
+                  {location.history && (
+                    <Box>
+                      <Text fontWeight="semibold" color="cyan.300" mb={1}>Historical Significance</Text>
+                      <Text color="gray.300">{location.history}</Text>
+                    </Box>
+                  )}
+
+                  {location.architecture && (
+                    <Box>
+                      <Text fontWeight="semibold" color="cyan.300" mb={1}>Architectural Features</Text>
+                      <Text color="gray.300">{location.architecture}</Text>
+                    </Box>
+                  )}
+
+                  {location.visitorInfo && (
+                    <Box>
+                      <Text fontWeight="semibold" color="cyan.300" mb={1}>Visitor Information</Text>
+                      <Text color="gray.300">{location.visitorInfo}</Text>
+                    </Box>
+                  )}
+
+                  {location.facts && (
+                    <Box>
+                      <Text fontWeight="semibold" color="cyan.300" mb={1}>Interesting Facts</Text>
+                      <Text color="gray.300">{location.facts}</Text>
+                    </Box>
+                  )}
+                </VStack>
               </Box>
             </TabPanel>
             

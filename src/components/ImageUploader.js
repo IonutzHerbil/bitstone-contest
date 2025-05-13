@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -8,22 +8,52 @@ import {
   Progress,
   IconButton,
   Text,
+  HStack,
+  Badge,
 } from '@chakra-ui/react';
-import { DeleteIcon, CheckIcon } from '@chakra-ui/icons';
+import { DeleteIcon, CheckIcon, RepeatIcon } from '@chakra-ui/icons';
 import config from '../config';
 
 const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading, processingProgress }) => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [userLocation, setUserLocation] = useState(null);
+  const [lastUploadedImage, setLastUploadedImage] = useState(null);
+  const [detectionFailed, setDetectionFailed] = useState(false);
   const fileInputRef = useRef(null);
   const toast = useToast();
+
+  // Get user's geolocation when component mounts
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lon: position.coords.longitude
+          });
+        },
+        (error) => {
+          console.log("Geolocation error:", error);
+          toast({
+            title: 'Location access denied',
+            description: 'We cannot use your location to improve detection.',
+            status: 'info',
+            duration: 3000,
+            isClosable: true,
+          });
+        }
+      );
+    }
+  }, [toast]);
 
   const handleImageSelect = (event) => {
     const file = event.target.files[0];
     if (file) {
       setSelectedImage(file);
       setPreviewUrl(URL.createObjectURL(file));
+      setDetectionFailed(false);
     }
   };
 
@@ -33,6 +63,7 @@ const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading, 
     }
     setSelectedImage(null);
     setPreviewUrl(null);
+    setDetectionFailed(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -54,8 +85,10 @@ const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading, 
     });
   };
 
-  const uploadImage = async () => {
-    if (!selectedImage) {
+  const uploadImage = async (isRetry = false) => {
+    const imageToUse = isRetry ? lastUploadedImage : selectedImage;
+    
+    if (!imageToUse) {
       toast({
         title: 'No image selected',
         status: 'warning',
@@ -66,16 +99,23 @@ const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading, 
     }
 
     setIsLoading(true);
+    setDetectionFailed(false);
 
     try {
       // Process image if needed (resize, compress, etc.)
-      const processedImage = await processImage(selectedImage);
+      const processedImage = await processImage(imageToUse);
       
       // Use the server-side ChatGPT-powered endpoint
       if (onUpload) {
         // Create a FormData object to send the image
         const formData = new FormData();
         formData.append('image', processedImage);
+        
+        // Add user location as hint if available
+        if (userLocation) {
+          formData.append('userLatitude', userLocation.lat);
+          formData.append('userLongitude', userLocation.lon);
+        }
         
         // For better debugging
         console.log(`Sending to ${config.apiBaseUrl}/api/detect-location`);
@@ -94,6 +134,14 @@ const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading, 
         
         // Get the location data
         const locationData = await response.json();
+        
+        // Check if it's a failed detection
+        if (locationData.name === "Unknown Landmark" || locationData.name === "Landmark Detection Failed") {
+          setDetectionFailed(true);
+          setLastUploadedImage(processedImage);
+          setIsLoading(false);
+          return;
+        }
         
         // Enhanced error handling for missing data
         if (!locationData.name || !locationData.description) {
@@ -156,6 +204,10 @@ const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading, 
     }
   };
 
+  const handleRetryDetection = () => {
+    uploadImage(true);
+  };
+
   const isProcessing = isLoading || externalLoading;
 
   return (
@@ -178,6 +230,12 @@ const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading, 
       >
         Take Photo
       </Button>
+      
+      {userLocation && (
+        <Badge colorScheme="green" variant="subtle" p={1} borderRadius="md">
+          Using your location for better detection
+        </Badge>
+      )}
       
       {previewUrl && (
         <Box 
@@ -211,11 +269,25 @@ const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading, 
         </Box>
       )}
 
-      {selectedImage && !isProcessing && (
+      {detectionFailed && (
+        <VStack spacing={3}>
+          <Text color="red.500">We couldn't identify this landmark accurately.</Text>
+          <Button
+            leftIcon={<RepeatIcon />}
+            colorScheme="orange"
+            onClick={handleRetryDetection}
+            isLoading={isProcessing}
+          >
+            Try Again
+          </Button>
+        </VStack>
+      )}
+
+      {selectedImage && !isProcessing && !detectionFailed && (
         <Button
           colorScheme="purple"
           size="lg"
-          onClick={uploadImage}
+          onClick={() => uploadImage(false)}
           leftIcon={<CheckIcon />}
           _hover={{ transform: 'scale(1.05)' }}
           transition="all 0.2s"

@@ -72,12 +72,30 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
     }
     console.log('File received:', req.file.mimetype, req.file.size, 'bytes');
 
+    // Get user location if provided
+    const userLocation = {
+      lat: req.body.userLatitude,
+      lon: req.body.userLongitude
+    };
+    
+    if (userLocation.lat && userLocation.lon) {
+      console.log('User location provided:', userLocation);
+    }
+
     // Convert the buffer to base64
     const base64Image = req.file.buffer.toString('base64');
     console.log('Image converted to base64');
 
     try {
       console.log('Calling OpenAI API...');
+      
+      // Construct the prompt with location hint if available
+      let promptText = "Please identify what landmark or location this might be. Return the response in this exact JSON format: {\"name\": \"full name of the landmark\", \"description\": \"detailed description about its history and significance\", \"location\": \"city, country\"}. For the description, please include: historical background, architectural features, cultural importance, interesting facts, and visitor information when possible. Be as detailed and comprehensive as possible.";
+      
+      if (userLocation.lat && userLocation.lon) {
+        promptText += ` The photo was taken near latitude ${userLocation.lat} and longitude ${userLocation.lon}, but this is just a hint - if you recognize a famous landmark from elsewhere, trust your identification over the location data.`;
+      }
+      
       // Call OpenAI API to analyze the image
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -87,7 +105,7 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
             content: [
               {
                 type: "text",
-                text: "Please identify what landmark or location this might be. Return the response in this exact JSON format: {\"name\": \"full name of the landmark\", \"description\": \"detailed description about its history and significance\", \"location\": \"city, country\"}. Be as accurate as possible.",
+                text: promptText,
               },
               {
                 type: "image_url",
@@ -146,14 +164,21 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
       // Create temporary URL for the uploaded image
       const imageUrl = `data:${req.file.mimetype};base64,${base64Image}`;
 
+      // Create response data
       const responseData = {
         id: locationId,
         name: locationInfo.name,
         description: locationInfo.description,
+        enhancedDescription: locationInfo.enhancedDescription || locationInfo.description,
         location: locationInfo.location,
         coordinates: coordinates,
         imageUrl: imageUrl,
         difficulty: 'medium',
+        // Additional information if available
+        history: locationInfo.history,
+        architecture: locationInfo.architecture,
+        visitorInfo: locationInfo.visitorInfo,
+        facts: locationInfo.facts
       };
       console.log('Sending response:', { ...responseData, imageUrl: '[truncated]' });
 
