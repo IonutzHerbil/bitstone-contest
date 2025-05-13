@@ -109,7 +109,7 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
             content: [
               {
                 type: "text",
-                text: "Please identify what landmark or location this might be. Return the response in this exact JSON format: {\"name\": \"full name of the landmark\", \"description\": \"brief description\", \"location\": \"city, country\"}. Keep the description under 100 words.",
+                text: "Please identify what landmark or location this might be. If you're not 100% certain, provide your best informed guess but mention your level of confidence (high, medium, low).\n\nIf the image is from Cluj-Napoca, Romania, please try to identify specific landmarks like St. Michael's Church, Union Square, Matthias Corvinus Statue, The Tailors' Bastion, Botanical Garden, etc.\n\nReturn the response in this exact JSON format: {\"name\": \"full name of the landmark\", \"description\": \"brief description including your confidence level if uncertain\", \"location\": \"city, country\"}. Keep the description under 100 words.",
               },
               {
                 type: "image_url",
@@ -121,7 +121,7 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
           },
         ],
         max_tokens: 500,
-        temperature: 0.7,
+        temperature: 0.5,
       });
       console.log('OpenAI API response received');
 
@@ -214,7 +214,7 @@ app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
           content: [
             {
               type: "text",
-              text: "This image is from Cluj-Napoca, Romania. Please identify what landmark or location this might be and provide a detailed description of what you see in the image. Focus on architectural details and historical significance if visible.",
+              text: "This image is from Cluj-Napoca, Romania. Please identify what landmark or location this might be and provide a detailed description of what you see in the image.\n\nFocus on:\n1. Architectural details and historical significance\n2. Cultural importance to Cluj-Napoca\n3. Interesting facts or stories related to this place\n4. When it was built and by whom (if applicable)\n\nIf you're uncertain about the exact landmark, please offer your best educated guess and mention which landmarks in Cluj-Napoca it resembles. Common landmarks include St. Michael's Church, Union Square, Matthias Corvinus Statue, The Tailors' Bastion, Central Park, Botanical Garden, etc.",
             },
             {
               type: "image_url",
@@ -225,8 +225,8 @@ app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
           ],
         },
       ],
-      max_tokens: 500,
-      temperature: 0.7,
+      max_tokens: 800,
+      temperature: 0.5,
     });
 
     res.json({
