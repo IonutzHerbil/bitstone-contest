@@ -83,6 +83,9 @@ const Login = ({ onLogin }) => {
     setIsLoading(true);
 
     try {
+      // Add logging for debugging
+      console.log(`Attempting to login with API URL: ${config.apiBaseUrl}/api/auth/login`);
+      
       const response = await fetch(`${config.apiBaseUrl}/api/auth/login`, {
         method: 'POST',
         headers: {
@@ -90,6 +93,17 @@ const Login = ({ onLogin }) => {
         },
         body: JSON.stringify({ username, password }),
       });
+
+      console.log('Login response status:', response.status);
+      console.log('Login response headers:', [...response.headers.entries()]);
+
+      // Check content type before parsing as JSON
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const textResponse = await response.text();
+        console.error("Received non-JSON response:", textResponse);
+        throw new Error("The server returned an invalid response. Please try again later.");
+      }
 
       const data = await response.json();
 
@@ -113,6 +127,7 @@ const Login = ({ onLogin }) => {
         isClosable: true,
       });
     } catch (error) {
+      console.error('Login error:', error);
       toast({
         title: 'Error',
         description: error.message,

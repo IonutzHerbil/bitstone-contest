@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   VStack,
@@ -28,6 +28,42 @@ const LocationDisplay = ({ location, showSaveButton = false }) => {
   const toast = useToast();
 
   const isLoggedIn = !!localStorage.getItem('token');
+
+  // Check if the location is already saved when the component mounts
+  useEffect(() => {
+    const checkIfSaved = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        if (token) {
+          // Check server if logged in
+          const response = await fetch(`${config.apiBaseUrl}/api/auth/locations`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            const locationExists = data.locations.some(loc => loc.id === location.id);
+            setIsSaved(locationExists);
+          }
+        } else {
+          // Check localStorage if not logged in
+          const savedLocations = JSON.parse(localStorage.getItem('savedLocations') || '[]');
+          const locationExists = savedLocations.some(loc => loc.id === location.id);
+          setIsSaved(locationExists);
+        }
+      } catch (err) {
+        console.error('Error checking if location is saved:', err);
+      }
+    };
+
+    if (showSaveButton && location) {
+      checkIfSaved();
+    }
+  }, [location, showSaveButton]);
 
   const handleSave = async () => {
     setIsLoading(true);

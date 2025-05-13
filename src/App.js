@@ -386,15 +386,15 @@ function App() {
               isCompact={true} // Add a compact prop for the homepage view
             />
             
-            {completedGames.length > 0 && (
-              <>
-                <Heading size="lg" mt={8} mb={4}>Your Progress</Heading>
-                <Box 
-                  bg="gray.800" 
-                  p={6} 
-                  borderRadius="xl"
-                  boxShadow="0 4px 12px rgba(0, 0, 0, 0.2)"
-                >
+            <Heading size="lg" mt={8} mb={4}>Your Progress</Heading>
+            <Box 
+              bg="gray.800" 
+              p={6} 
+              borderRadius="xl"
+              boxShadow="0 4px 12px rgba(0, 0, 0, 0.2)"
+            >
+              {completedGames.length > 0 ? (
+                <>
                   <Text fontSize="lg" mb={2}>
                     You've completed {completedGames.length} out of {gameTypes.length} games!
                   </Text>
@@ -406,9 +406,23 @@ function App() {
                   >
                     Continue Your Journey
                   </Button>
-                </Box>
-              </>
-            )}
+                </>
+              ) : (
+                <>
+                  <Text fontSize="lg" mb={2}>
+                    You haven't completed any games yet. Start playing to track your progress!
+                  </Text>
+                  <Button
+                    variant="outline"
+                    colorScheme="cyan"
+                    mt={2}
+                    onClick={() => setCurrentView('game')}
+                  >
+                    Start Your Journey
+                  </Button>
+                </>
+              )}
+            </Box>
           </VStack>
         );
     }

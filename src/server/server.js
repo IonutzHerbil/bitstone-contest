@@ -23,8 +23,8 @@ mongoose.connect(process.env.MONGODB_URI, {
 .catch((error) => console.error('MongoDB connection error:', error));
 
 app.use(cors());
-app.use(express.json({ limit: '0' }));
-app.use(express.urlencoded({ limit: '0', extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Configure multer for handling file uploads
 const storage = multer.memoryStorage();
