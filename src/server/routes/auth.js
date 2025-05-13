@@ -139,4 +139,113 @@ router.get('/progress/:gameId', auth, async (req, res) => {
   }
 });
 
+// Get all saved locations for the user
+router.get('/locations', auth, async (req, res) => {
+  try {
+    // Return the user's saved locations
+    res.json({ 
+      locations: req.user.savedLocations || []
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to fetch saved locations',
+      details: error.message
+    });
+  }
+});
+
+// Save a new location for the user
+router.post('/locations', auth, async (req, res) => {
+  try {
+    const { location } = req.body;
+    
+    if (!location || !location.id || !location.name) {
+      return res.status(400).json({ error: 'Invalid location data' });
+    }
+    
+    // Check if the location already exists
+    const existingLocationIndex = req.user.savedLocations.findIndex(loc => loc.id === location.id);
+    
+    // Update existing location or add new one
+    if (existingLocationIndex !== -1) {
+      // If location exists but has notes, keep the notes
+      const existingNotes = req.user.savedLocations[existingLocationIndex].notes;
+      if (existingNotes && !location.notes) {
+        location.notes = existingNotes;
+      }
+      // Replace the existing location
+      req.user.savedLocations[existingLocationIndex] = location;
+    } else {
+      // Add new location
+      req.user.savedLocations.push(location);
+    }
+    
+    await req.user.save();
+    
+    res.json({ 
+      success: true,
+      message: 'Location saved successfully',
+      locations: req.user.savedLocations
+    });
+  } catch (error) {
+    console.error('Error saving location:', error);
+    res.status(500).json({
+      error: 'Failed to save location',
+      details: error.message
+    });
+  }
+});
+
+// Update notes for a saved location
+router.patch('/locations/:locationId', auth, async (req, res) => {
+  try {
+    const { locationId } = req.params;
+    const { notes } = req.body;
+    
+    // Find the location in the user's collection
+    const locationIndex = req.user.savedLocations.findIndex(loc => loc.id === locationId);
+    
+    if (locationIndex === -1) {
+      return res.status(404).json({ error: 'Location not found' });
+    }
+    
+    // Update the notes
+    req.user.savedLocations[locationIndex].notes = notes;
+    await req.user.save();
+    
+    res.json({ 
+      success: true,
+      message: 'Notes updated successfully',
+      location: req.user.savedLocations[locationIndex]
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to update location notes',
+      details: error.message
+    });
+  }
+});
+
+// Delete a saved location
+router.delete('/locations/:locationId', auth, async (req, res) => {
+  try {
+    const { locationId } = req.params;
+    
+    // Find and remove the location
+    req.user.savedLocations = req.user.savedLocations.filter(loc => loc.id !== locationId);
+    await req.user.save();
+    
+    res.json({ 
+      success: true,
+      message: 'Location deleted successfully',
+      locations: req.user.savedLocations
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Failed to delete location',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router; 

@@ -7,8 +7,10 @@ import {
   useToast,
   Progress,
   IconButton,
+  Icon,
 } from '@chakra-ui/react';
 import { DeleteIcon } from '@chakra-ui/icons';
+import { FaCamera, FaMapMarkerAlt } from 'react-icons/fa';
 import axios from 'axios';
 import config from '../config';
 
@@ -21,6 +23,17 @@ const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading }
 
   const handleImageSelect = (event) => {
     const file = event.target.files[0];
+    
+    // Clear previous image first
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+    
+    // Reset state before setting the new image
+    setSelectedImage(null);
+    setPreviewUrl(null);
+    
+    // Set the new image if one was selected
     if (file) {
       setSelectedImage(file);
       setPreviewUrl(URL.createObjectURL(file));
@@ -101,11 +114,26 @@ const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading }
         style={{ display: 'none' }}
       />
       <Button
-        colorScheme="cyan"
+        leftIcon={<Icon as={FaCamera} boxSize={5} />}
         size="lg"
         onClick={() => fileInputRef.current.click()}
-        _hover={{ transform: 'scale(1.05)' }}
         transition="all 0.2s"
+        px={8}
+        py={6}
+        fontSize="md"
+        fontWeight="bold"
+        bgGradient="linear(to-r, green.400, teal.500)"
+        _hover={{ 
+          bgGradient: "linear(to-r, green.500, teal.600)",
+          transform: 'translateY(-2px)',
+          boxShadow: '0 10px 20px rgba(49, 151, 149, 0.3)'
+        }}
+        _active={{
+          bgGradient: "linear(to-r, green.600, teal.700)",
+          transform: 'translateY(0)',
+        }}
+        borderRadius="lg"
+        color="white"
       >
         Take Photo
       </Button>
@@ -117,7 +145,9 @@ const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading }
           w="100%" 
           borderRadius="xl" 
           overflow="hidden"
-          boxShadow="0 0 20px rgba(0, 255, 255, 0.2)"
+          boxShadow="0 10px 25px rgba(0, 0, 0, 0.2)"
+          border="3px solid"
+          borderColor="gray.700"
         >
           <Image 
             src={previewUrl} 
@@ -136,19 +166,35 @@ const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading }
             aria-label="Delete photo"
             _hover={{ transform: 'scale(1.1)' }}
             transition="all 0.2s"
+            boxShadow="0 4px 8px rgba(0, 0, 0, 0.2)"
           />
         </Box>
       )}
 
       {selectedImage && (
         <Button
-          colorScheme="purple"
+          leftIcon={<Icon as={FaMapMarkerAlt} boxSize={5} />}
           size="lg"
           onClick={uploadImage}
           isLoading={isLoading || externalLoading}
           loadingText="Processing..."
-          _hover={{ transform: 'scale(1.05)' }}
           transition="all 0.2s"
+          px={8}
+          py={6}
+          fontSize="md"
+          fontWeight="bold"
+          bgGradient="linear(to-r, purple.500, pink.500)"
+          _hover={{ 
+            bgGradient: "linear(to-r, purple.600, pink.600)",
+            transform: 'translateY(-2px)',
+            boxShadow: '0 10px 20px rgba(159, 122, 234, 0.3)'
+          }}
+          _active={{
+            bgGradient: "linear(to-r, purple.700, pink.700)",
+            transform: 'translateY(0)',
+          }}
+          borderRadius="lg"
+          color="white"
         >
           {onUpload ? 'Detect Location' : 'Verify Photo'}
         </Button>
@@ -160,6 +206,7 @@ const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading }
           isIndeterminate 
           width="100%" 
           colorScheme="purple"
+          borderRadius="full"
         />
       )}
     </VStack>

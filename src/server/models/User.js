@@ -10,6 +10,24 @@ const gameProgressSchema = new mongoose.Schema({
   }]
 });
 
+const locationSchema = new mongoose.Schema({
+  id: String,
+  name: String,
+  description: String,
+  location: String,
+  coordinates: {
+    lat: Number,
+    lon: Number
+  },
+  imageUrl: String,
+  difficulty: String,
+  notes: String,
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
 const userSchema = new mongoose.Schema({
   username: {
     type: String,
@@ -29,6 +47,7 @@ const userSchema = new mongoose.Schema({
     required: true
   },
   gameProgress: [gameProgressSchema],
+  savedLocations: [locationSchema],
   createdAt: {
     type: Date,
     default: Date.now

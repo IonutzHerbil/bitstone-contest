@@ -12,21 +12,78 @@ import {
   Link,
   InputGroup,
   InputLeftElement,
+  Alert,
+  AlertIcon,
 } from '@chakra-ui/react';
 import { FaUser, FaLock } from 'react-icons/fa';
+import config from '../config';
 
 const Login = ({ onLogin }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isMigratingLocations, setIsMigratingLocations] = useState(false);
   const toast = useToast();
+
+  // Function to migrate local saved locations to the server
+  const migrateLocalLocations = async (token) => {
+    try {
+      setIsMigratingLocations(true);
+      
+      // Get locally saved locations
+      const localLocations = JSON.parse(localStorage.getItem('savedLocations') || '[]');
+      
+      if (localLocations.length === 0) {
+        return; // No locations to migrate
+      }
+      
+      // For each location, save it to the server
+      for (const location of localLocations) {
+        try {
+          await fetch(`${config.apiBaseUrl}/api/auth/locations`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+            },
+            body: JSON.stringify({ location }),
+          });
+        } catch (err) {
+          console.error('Error migrating location:', location.id, err);
+        }
+      }
+      
+      // Show success message
+      toast({
+        title: 'Collection migrated',
+        description: `${localLocations.length} locations from your local collection were added to your account.`,
+        status: 'success',
+        duration: 5000,
+        isClosable: true,
+      });
+      
+      // Clear local locations after successful migration
+      localStorage.removeItem('savedLocations');
+    } catch (err) {
+      console.error('Error during migration:', err);
+      toast({
+        title: 'Migration incomplete',
+        description: 'Some locations may not have been transferred. They remain in your local storage.',
+        status: 'warning',
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setIsMigratingLocations(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      const response = await fetch(`${config.apiBaseUrl}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -42,6 +99,11 @@ const Login = ({ onLogin }) => {
 
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      
+      // Migrate local locations to the server
+      await migrateLocalLocations(data.token);
+      
+      // Notify parent component about login
       onLogin(data.user);
 
       toast({
@@ -136,6 +198,14 @@ const Login = ({ onLogin }) => {
             Sign in to continue your photo challenge journey
           </Text>
 
+          {/* Display migration alert if there are local locations */}
+          {JSON.parse(localStorage.getItem('savedLocations') || '[]').length > 0 && (
+            <Alert status="info" borderRadius="md" fontSize="sm">
+              <AlertIcon />
+              Signing in will transfer your locally saved locations to your account.
+            </Alert>
+          )}
+
           <form onSubmit={handleSubmit}>
             <VStack spacing={5}>
               <FormControl isRequired>
@@ -208,8 +278,8 @@ const Login = ({ onLogin }) => {
                   transform: "translateY(0)",
                   bgGradient: "linear(to-r, cyan.600, purple.700)"
                 }}
-                isLoading={isLoading}
-                loadingText="Signing In..."
+                isLoading={isLoading || isMigratingLocations}
+                loadingText={isMigratingLocations ? "Migrating Collection..." : "Signing In..."}
                 fontSize="md"
                 py={6}
                 mt={2}

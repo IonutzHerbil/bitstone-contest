@@ -18,30 +18,119 @@ import {
   Textarea,
   Heading,
   HStack,
+  Spinner,
+  Center,
+  Alert,
+  AlertIcon,
+  AlertTitle,
+  AlertDescription,
 } from '@chakra-ui/react';
 import { DeleteIcon, EditIcon, ExternalLinkIcon, InfoIcon } from '@chakra-ui/icons';
+import config from '../config';
 
 const LocationCollection = () => {
-  const [savedLocations, setSavedLocations] = useState(() => {
-    const saved = localStorage.getItem('savedLocations');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [savedLocations, setSavedLocations] = useState([]);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [notes, setNotes] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const toast = useToast();
 
+  // Load saved locations from the server on component mount
   useEffect(() => {
-    localStorage.setItem('savedLocations', JSON.stringify(savedLocations));
-  }, [savedLocations]);
+    const fetchSavedLocations = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          // Fall back to localStorage if not logged in
+          const localSaved = localStorage.getItem('savedLocations');
+          if (localSaved) {
+            setSavedLocations(JSON.parse(localSaved));
+          }
+          setIsLoading(false);
+          return;
+        }
+        
+        const response = await fetch(`${config.apiBaseUrl}/api/auth/locations`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch your saved locations');
+        }
+        
+        const data = await response.json();
+        setSavedLocations(data.locations || []);
+      } catch (err) {
+        console.error('Error fetching locations:', err);
+        setError(err.message || 'Failed to load your collection');
+        
+        // Fall back to localStorage if API fails
+        const localSaved = localStorage.getItem('savedLocations');
+        if (localSaved) {
+          setSavedLocations(JSON.parse(localSaved));
+          toast({
+            title: 'Using locally saved locations',
+            description: 'Could not connect to server, showing local data instead.',
+            status: 'warning',
+            duration: 3000,
+          });
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const handleDelete = (locationId) => {
-    setSavedLocations(savedLocations.filter(loc => loc.id !== locationId));
-    toast({
-      title: 'Location removed',
-      status: 'info',
-      duration: 2000,
-    });
+    fetchSavedLocations();
+  }, [toast]);
+
+  const handleDelete = async (locationId) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (token) {
+        // Delete from server if logged in
+        const response = await fetch(`${config.apiBaseUrl}/api/auth/locations/${locationId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to delete location');
+        }
+        
+        const data = await response.json();
+        setSavedLocations(data.locations);
+      } else {
+        // Fall back to localStorage if not logged in
+        const updatedLocations = savedLocations.filter(loc => loc.id !== locationId);
+        setSavedLocations(updatedLocations);
+        localStorage.setItem('savedLocations', JSON.stringify(updatedLocations));
+      }
+      
+      toast({
+        title: 'Location removed',
+        status: 'info',
+        duration: 2000,
+      });
+    } catch (err) {
+      console.error('Error deleting location:', err);
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to delete location',
+        status: 'error',
+        duration: 3000,
+      });
+    }
   };
 
   const handleEditNotes = (location) => {
@@ -50,18 +139,59 @@ const LocationCollection = () => {
     onOpen();
   };
 
-  const saveNotes = () => {
-    setSavedLocations(savedLocations.map(loc => 
-      loc.id === selectedLocation.id 
-        ? { ...loc, notes } 
-        : loc
-    ));
-    onClose();
-    toast({
-      title: 'Notes saved',
-      status: 'success',
-      duration: 2000,
-    });
+  const saveNotes = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (token) {
+        // Save to server if logged in
+        const response = await fetch(`${config.apiBaseUrl}/api/auth/locations/${selectedLocation.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ notes }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to update notes');
+        }
+        
+        const data = await response.json();
+        
+        // Update the location in the local state
+        setSavedLocations(savedLocations.map(loc => 
+          loc.id === selectedLocation.id 
+            ? { ...loc, notes } 
+            : loc
+        ));
+      } else {
+        // Fall back to localStorage if not logged in
+        const updatedLocations = savedLocations.map(loc => 
+          loc.id === selectedLocation.id 
+            ? { ...loc, notes } 
+            : loc
+        );
+        setSavedLocations(updatedLocations);
+        localStorage.setItem('savedLocations', JSON.stringify(updatedLocations));
+      }
+      
+      onClose();
+      toast({
+        title: 'Notes saved',
+        status: 'success',
+        duration: 2000,
+      });
+    } catch (err) {
+      console.error('Error saving notes:', err);
+      toast({
+        title: 'Error',
+        description: err.message || 'Failed to save notes',
+        status: 'error',
+        duration: 3000,
+      });
+    }
   };
 
   const handleShare = async (location) => {
@@ -90,6 +220,45 @@ const LocationCollection = () => {
       });
     }
   };
+
+  if (isLoading) {
+    return (
+      <Center p={8} h="300px">
+        <VStack spacing={4}>
+          <Spinner size="xl" color="cyan.400" thickness="4px" />
+          <Text color="gray.400">Loading your collection...</Text>
+        </VStack>
+      </Center>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert
+        status="error"
+        variant="subtle"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        textAlign="center"
+        height="300px"
+        borderRadius="xl"
+        bg="red.900"
+        color="white"
+      >
+        <AlertIcon boxSize="40px" mr={0} color="red.300" />
+        <AlertTitle mt={4} mb={1} fontSize="lg">
+          Error Loading Collection
+        </AlertTitle>
+        <AlertDescription maxWidth="sm">
+          {error}
+        </AlertDescription>
+        <Button mt={4} colorScheme="red" onClick={() => window.location.reload()}>
+          Try Again
+        </Button>
+      </Alert>
+    );
+  }
 
   if (savedLocations.length === 0) {
     return (

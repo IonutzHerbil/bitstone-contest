@@ -12,11 +12,15 @@ import {
   Flex,
   Spacer,
   Progress,
+  Grid,
+  GridItem,
+  HStack,
+  Icon,
 } from '@chakra-ui/react';
-import { StarIcon, TimeIcon } from '@chakra-ui/icons';
+import { StarIcon, TimeIcon, ChevronRightIcon } from '@chakra-ui/icons';
 import { saveGameProgress } from '../utils/progressUtils';
 
-const GameSelector = ({ games, completedGames, onLogout }) => {
+const GameSelector = ({ games, completedGames, onLogout, onSelectGame, isCompact = false }) => {
   const navigate = useNavigate();
   const [userData, setUserData] = useState(null);
   
@@ -71,7 +75,6 @@ const GameSelector = ({ games, completedGames, onLogout }) => {
   const getGameProgress = (gameId) => {
     if (!userData?.gameProgress) return { completedLocations: [], completed: false };
     const progress = userData.gameProgress.find(g => g.gameId === gameId);
-    console.log('Game progress for', gameId, ':', progress); // Debug log
     if (!progress) return { completedLocations: [], completed: false };
     return {
       ...progress,
@@ -87,11 +90,17 @@ const GameSelector = ({ games, completedGames, onLogout }) => {
   };
 
   const handleGameSelect = (game) => {
-    navigate(`/game/${game.id}`);
+    if (onSelectGame) {
+      onSelectGame(game);
+    } else {
+      navigate(`/game/${game.id}`);
+    }
   };
 
   const handleLogout = async () => {
     try {
+      if (!onLogout) return;
+      
       // Save progress for all in-progress games before logging out
       const savePromises = games.map(game => {
         const progress = getGameProgress(game.id);
@@ -110,7 +119,7 @@ const GameSelector = ({ games, completedGames, onLogout }) => {
     } catch (error) {
       console.error('Error during logout:', error);
       // Still logout even if saving fails
-      await onLogout();
+      if (onLogout) await onLogout();
     }
   };
 
@@ -119,31 +128,39 @@ const GameSelector = ({ games, completedGames, onLogout }) => {
   }
 
   return (
-    <Box p={6}>
-      <Flex mb={8} align="center">
-        <VStack align="start" spacing={1}>
-          <Heading 
-            bgGradient="linear(to-r, cyan.400, purple.500)"
-            bgClip="text"
-            fontSize={["xl", "2xl"]}
-          >
-            Welcome, {userData.username}!
-          </Heading>
-          <Text color="gray.500">
-            Completed Games: {completedGames.length} / {games.length}
-          </Text>
-        </VStack>
-        <Spacer />
-        <Button
-          colorScheme="red"
-          variant="outline"
-          onClick={handleLogout}
-        >
-          Logout
-        </Button>
-      </Flex>
+    <Box p={isCompact ? 0 : 6}>
+      {!isCompact && (
+        <Flex mb={8} align="center">
+          <VStack align="start" spacing={1}>
+            <Heading 
+              bgGradient="linear(to-r, cyan.400, purple.500)"
+              bgClip="text"
+              fontSize={["xl", "2xl"]}
+            >
+              Welcome, {userData.username}!
+            </Heading>
+            <Text color="gray.500">
+              Completed Games: {completedGames.length} / {games.length}
+            </Text>
+          </VStack>
+          <Spacer />
+          {onLogout && (
+            <Button
+              colorScheme="red"
+              variant="outline"
+              onClick={handleLogout}
+            >
+              Logout
+            </Button>
+          )}
+        </Flex>
+      )}
 
-      <SimpleGrid columns={{ base: 1, md: 3 }} spacing={6} width="100%">
+      <SimpleGrid 
+        columns={isCompact ? { base: 1, md: 2, lg: 4 } : { base: 1, md: 2, lg: 3 }} 
+        spacing={isCompact ? 4 : 6} 
+        width="100%"
+      >
         {games.map((game) => {
           const progress = getGameProgress(game.id);
           const isCompleted = Boolean(progress?.completed);
@@ -151,13 +168,114 @@ const GameSelector = ({ games, completedGames, onLogout }) => {
           const currentScore = calculateScore(game, progress);
           const completedLocationsCount = progress?.completedLocations?.length || 0;
           
-          console.log('Rendering game:', game.id, {
-            isCompleted,
-            completedLocationsCount,
-            progress
-          }); // Debug log
-
-          return (
+          return isCompact ? (
+            // Compact card for homepage
+            <Box
+              key={game.id}
+              bg="gray.800"
+              p={4}
+              borderRadius="lg"
+              borderWidth="1px"
+              borderColor={isCompleted ? "purple.500" : completedLocationsCount > 0 ? "cyan.500" : "transparent"}
+              boxShadow={
+                isCompleted 
+                  ? "0 0 15px rgba(128, 90, 213, 0.2)" 
+                  : completedLocationsCount > 0 
+                    ? "0 0 15px rgba(0, 255, 255, 0.2)"
+                    : "0 0 10px rgba(0, 0, 0, 0.2)"
+              }
+              transition="all 0.2s"
+              _hover={{
+                transform: 'translateY(-3px)',
+                boxShadow: isCompleted 
+                  ? "0 0 20px rgba(159, 122, 234, 0.3)"
+                  : "0 0 20px rgba(0, 255, 255, 0.25)",
+                cursor: 'pointer'
+              }}
+              onClick={() => handleGameSelect(game)}
+              position="relative"
+              overflow="hidden"
+            >
+              <Flex direction="column" h="100%">
+                <HStack justify="space-between" mb={2}>
+                  <Badge 
+                    colorScheme={getDifficultyColor(game.difficulty)}
+                    px={2}
+                    py={0.5}
+                    fontSize="xs"
+                  >
+                    {game.difficulty}
+                  </Badge>
+                  {isCompleted && (
+                    <Badge colorScheme="purple" fontSize="xs" px={2} py={0.5}>
+                      COMPLETED
+                    </Badge>
+                  )}
+                </HStack>
+                
+                <Heading 
+                  size="sm" 
+                  color={isCompleted ? "purple.400" : "cyan.400"}
+                  mb={1}
+                  noOfLines={1}
+                >
+                  {game.name}
+                </Heading>
+                
+                <Text 
+                  color="gray.300" 
+                  fontSize="xs" 
+                  noOfLines={1}
+                  textOverflow="ellipsis"
+                  whiteSpace="nowrap"
+                  overflow="hidden"
+                  mb={2}
+                  flex="1"
+                >
+                  {game.description}
+                </Text>
+                
+                <Progress
+                  value={(completedLocationsCount / game.locations.length) * 100}
+                  size="xs"
+                  colorScheme={isCompleted ? "purple" : "cyan"}
+                  borderRadius="full"
+                  mb={2}
+                />
+                
+                <HStack justify="space-between" fontSize="xs" color="gray.400">
+                  <Text>{completedLocationsCount}/{game.locations.length}</Text>
+                  <Text>{currentScore}/{totalPoints} pts</Text>
+                </HStack>
+                
+                <Icon 
+                  as={ChevronRightIcon} 
+                  position="absolute"
+                  right={2}
+                  bottom={2}
+                  color={isCompleted ? "purple.400" : "cyan.400"}
+                />
+                
+                {isCompleted && (
+                  <Box
+                    position="absolute"
+                    bottom={0}
+                    left={0}
+                    bg="linear-gradient(to right, rgba(159, 122, 234, 0.7), rgba(236, 72, 153, 0.7))"
+                    color="white"
+                    fontSize="xs"
+                    py={1}
+                    px={2}
+                    borderTopRightRadius="md"
+                    fontWeight="medium"
+                  >
+                    Play Again
+                  </Box>
+                )}
+              </Flex>
+            </Box>
+          ) : (
+            // Full-sized card for game selection page
             <Box
               key={game.id}
               bg="gray.800"
@@ -185,7 +303,14 @@ const GameSelector = ({ games, completedGames, onLogout }) => {
                   <Heading size="md" color={isCompleted ? "purple.400" : "cyan.400"}>
                     {game.name}
                   </Heading>
-                  <Text color="gray.300" fontSize="sm">
+                  <Text 
+                    color="gray.300" 
+                    fontSize="sm"
+                    noOfLines={1}
+                    textOverflow="ellipsis"
+                    whiteSpace="nowrap"
+                    overflow="hidden"
+                  >
                     {game.description}
                   </Text>
                 </VStack>
@@ -243,6 +368,12 @@ const GameSelector = ({ games, completedGames, onLogout }) => {
                   colorScheme={isCompleted ? "purple" : "cyan"}
                   onClick={() => handleGameSelect(game)}
                   rightIcon={isCompleted ? <StarIcon /> : completedLocationsCount > 0 ? <TimeIcon /> : null}
+                  bgGradient={isCompleted ? "linear(to-r, purple.500, pink.500)" : completedLocationsCount > 0 ? "linear(to-r, cyan.500, teal.500)" : "linear(to-r, cyan.500, blue.500)"}
+                  _hover={{
+                    bgGradient: isCompleted ? "linear(to-r, purple.400, pink.400)" : completedLocationsCount > 0 ? "linear(to-r, cyan.400, teal.400)" : "linear(to-r, cyan.400, blue.400)",
+                    transform: 'translateY(-2px)',
+                    boxShadow: isCompleted ? '0 4px 12px rgba(159, 122, 234, 0.3)' : '0 4px 12px rgba(0, 255, 255, 0.3)'
+                  }}
                 >
                   {isCompleted 
                     ? "Play Again" 
@@ -256,6 +387,19 @@ const GameSelector = ({ games, completedGames, onLogout }) => {
           );
         })}
       </SimpleGrid>
+      {isCompact && games.length > 4 && (
+        <Button
+          variant="ghost"
+          colorScheme="cyan"
+          size="sm"
+          rightIcon={<ChevronRightIcon />}
+          mt={4}
+          onClick={() => navigate('/game')}
+          alignSelf="flex-end"
+        >
+          View All Games
+        </Button>
+      )}
     </Box>
   );
 };

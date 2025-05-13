@@ -109,8 +109,35 @@ const PhotoGame = ({ gameData, onGameComplete, onLogout }) => {
   const handlePhotoSubmission = async (imageAnalysis) => {
     if (!currentLocation) return;
 
+    // Check if imageAnalysis is a string or an object
+    let analysisText = '';
+    
+    if (typeof imageAnalysis === 'string') {
+      analysisText = imageAnalysis;
+    } else if (imageAnalysis && typeof imageAnalysis === 'object') {
+      // Extract text from the object fields
+      const analysisFields = [
+        imageAnalysis.name || '',
+        imageAnalysis.description || '',
+        imageAnalysis.historicalContext || '',
+        // Add any other fields that might contain relevant information
+        imageAnalysis.location || ''
+      ];
+      analysisText = analysisFields.join(' ');
+    } else {
+      // If we can't extract useful text, show an error
+      toast({
+        title: "Analysis Error",
+        description: "We couldn't analyze the photo properly. Please try again.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      return;
+    }
+    
     const locationMatches = currentLocation.keywords.some(keyword =>
-      imageAnalysis.toLowerCase().includes(keyword.toLowerCase())
+      analysisText.toLowerCase().includes(keyword.toLowerCase())
     );
     
     if (locationMatches) {
@@ -251,126 +278,156 @@ const PhotoGame = ({ gameData, onGameComplete, onLogout }) => {
   };
 
   return (
-    <Box minH="100vh" bg="black" color="white">
+    <Box minH="100vh" bg="gray.900" color="white">
       <Container maxW="container.xl" py={8}>
         <VStack spacing={8} align="stretch">
-          <Heading 
-            textAlign="center"
-            bgGradient="linear(to-r, cyan.400, purple.500)" 
-            bgClip="text" 
-            fontSize={["2xl", "3xl"]}
-            fontWeight="extrabold"
+          <Box 
+            bg="gray.800" 
+            p={6} 
+            borderRadius="xl"
+            boxShadow="0 4px 20px rgba(0, 0, 0, 0.3)"
           >
-            Photo Challenge & Explorer
-          </Heading>
-          
-          <VStack spacing={6} width="100%" align="stretch">
             <Grid templateColumns="repeat(3, 1fr)" gap={4}>
               <GridItem>
-                <Button
-                  leftIcon={<ArrowBackIcon />}
-                  onClick={handleBackToGames}
-                  colorScheme="gray"
-                  size="sm"
-                >
-                  Back to Games
-                </Button>
+                <VStack align="start">
+                  <Text color="gray.400">Score</Text>
+                  <Heading size="lg" bgGradient="linear(to-r, cyan.400, purple.500)" bgClip="text">
+                    {score}
+                  </Heading>
+                </VStack>
               </GridItem>
-              <GridItem textAlign="center">
-                <Heading 
-                  size="md"
-                  bgGradient="linear(to-r, cyan.400, purple.500)"
-                  bgClip="text"
-                >
-                  {gameData.name}
-                </Heading>
+              <GridItem>
+                <VStack align="center">
+                  <Text color="gray.400">Progress</Text>
+                  <Progress
+                    value={((completedLocations?.length || 0) / gameData.locations.length) * 100}
+                    width="100%"
+                    colorScheme="cyan"
+                    borderRadius="full"
+                  />
+                  <Text color="gray.400" fontSize="sm">
+                    {completedLocations.length} / {gameData.locations.length} Locations
+                  </Text>
+                </VStack>
               </GridItem>
-              <GridItem textAlign="right">
-                <Button
-                  colorScheme="red"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                >
-                  Logout
-                </Button>
+              <GridItem>
+                <VStack align="end">
+                  <Text color="gray.400">Total Available</Text>
+                  <Text color="purple.400" fontWeight="bold">{totalPoints} pts</Text>
+                </VStack>
               </GridItem>
             </Grid>
+          </Box>
 
-            <Box>
-              <Grid templateColumns="repeat(3, 1fr)" gap={4}>
-                <GridItem>
-                  <VStack align="start">
-                    <Text color="gray.400">Score</Text>
-                    <Heading size="lg" bgGradient="linear(to-r, cyan.400, purple.500)" bgClip="text">
-                      {score}
-                    </Heading>
-                  </VStack>
-                </GridItem>
-                <GridItem>
-                  <VStack align="center">
-                    <Text color="gray.400">Progress</Text>
-                    <Progress
-                      value={((completedLocations?.length || 0) / gameData.locations.length) * 100}
-                      width="100%"
-                      colorScheme="cyan"
-                      borderRadius="full"
-                    />
-                    <Text color="gray.400" fontSize="sm">
-                      {completedLocations.length} / {gameData.locations.length} Locations
-                    </Text>
-                  </VStack>
-                </GridItem>
-                <GridItem>
-                  <VStack align="end">
-                    <Text color="gray.400">Total Available</Text>
-                    <Text color="purple.400">{totalPoints} pts</Text>
-                  </VStack>
-                </GridItem>
-              </Grid>
+          {!gameStarted ? (
+            <VStack spacing={6} bg="gray.800" p={8} borderRadius="xl" boxShadow="0 4px 20px rgba(0, 0, 0, 0.3)">
+              <Heading size="lg" textAlign="center" bgGradient="linear(to-r, cyan.400, purple.500)" bgClip="text">
+                {gameData.name}
+              </Heading>
+              <Text 
+                textAlign="center" 
+                color="gray.300" 
+                fontSize="lg"
+                maxW="100%"
+                noOfLines={1}
+                textOverflow="ellipsis"
+                whiteSpace="nowrap"
+                overflow="hidden"
+                px={4}
+              >
+                {gameData.description}
+              </Text>
+              <Badge colorScheme={
+                gameData.difficulty.toLowerCase() === 'easy' ? 'green' :
+                gameData.difficulty.toLowerCase() === 'medium' ? 'yellow' : 'red'
+              } fontSize="md" px={3} py={1}>
+                {gameData.difficulty} Difficulty
+              </Badge>
+              <Text color="gray.400" textAlign="center">
+                Find and photograph {gameData.locations.length} locations around Cluj-Napoca
+              </Text>
+              <Button
+                colorScheme="cyan"
+                size="lg"
+                onClick={startGame}
+                _hover={{ 
+                  transform: 'scale(1.05)',
+                  bgGradient: "linear(to-r, cyan.400, purple.400)"
+                }}
+                transition="all 0.2s"
+                px={8}
+                py={6}
+                bgGradient={completedLocations.length > 0 
+                  ? "linear(to-r, cyan.500, teal.500)" 
+                  : "linear(to-r, cyan.500, blue.500)"
+                }
+              >
+                {completedLocations.length > 0 ? 'Continue Game' : 'Start Challenge'}
+              </Button>
+            </VStack>
+          ) : currentLocation ? (
+            <VStack spacing={6} align="stretch">
+              <Box 
+                bg="gray.800" 
+                p={6} 
+                borderRadius="xl" 
+                width="100%"
+                boxShadow="0 4px 20px rgba(0, 0, 0, 0.3)"
+              >
+                <VStack align="start" spacing={4}>
+                  <Badge 
+                    colorScheme="purple" 
+                    fontSize="md" 
+                    p={2}
+                    borderRadius="md"
+                  >
+                    Current Challenge
+                  </Badge>
+                  <Heading 
+                    size="lg"
+                    bgGradient="linear(to-r, cyan.400, purple.500)" 
+                    bgClip="text"
+                  >
+                    {currentLocation.name}
+                  </Heading>
+                  <Text color="gray.300" fontSize="lg">
+                    {currentLocation.description}
+                  </Text>
+                  <Badge 
+                    colorScheme="green" 
+                    p={2} 
+                    borderRadius="md"
+                    fontSize="md"
+                  >
+                    {currentLocation.points} points available
+                  </Badge>
+                </VStack>
+              </Box>
+              <Box 
+                bg="gray.800" 
+                p={6} 
+                borderRadius="xl"
+                boxShadow="0 4px 20px rgba(0, 0, 0, 0.3)"
+              >
+                <VStack align="center" spacing={4}>
+                  <Text fontSize="lg" color="gray.300">
+                    Take a photo of this location to earn points!
+                  </Text>
+                  <ImageUploader onPhotoAnalyzed={handlePhotoSubmission} />
+                </VStack>
+              </Box>
+            </VStack>
+          ) : (
+            <Box 
+              bg="gray.800" 
+              p={6} 
+              borderRadius="xl"
+              boxShadow="0 4px 20px rgba(0, 0, 0, 0.3)"
+              textAlign="center"
+            >
+              <Text fontSize="lg">Loading next location...</Text>
             </Box>
-
-            {!gameStarted ? (
-              <VStack spacing={4} bg="gray.800" p={6} borderRadius="xl">
-                <Text textAlign="center" color="gray.300">
-                  {gameData.description}
-                </Text>
-                <Badge colorScheme={
-                  gameData.difficulty.toLowerCase() === 'easy' ? 'green' :
-                  gameData.difficulty.toLowerCase() === 'medium' ? 'yellow' : 'red'
-                }>
-                  {gameData.difficulty} Difficulty
-                </Badge>
-                <Button
-                  colorScheme="cyan"
-                  size="lg"
-                  onClick={startGame}
-                  _hover={{ transform: 'scale(1.05)' }}
-                  transition="all 0.2s"
-                >
-                  {completedLocations.length > 0 ? 'Continue Game' : 'Start Challenge'}
-                </Button>
-              </VStack>
-            ) : currentLocation ? (
-              <VStack spacing={4}>
-                <Box bg="gray.800" p={6} borderRadius="xl" width="100%">
-                  <VStack align="start" spacing={3}>
-                    <Badge colorScheme="purple" fontSize="md" p={2}>
-                      Current Challenge
-                    </Badge>
-                    <Heading size="md">{currentLocation.name}</Heading>
-                    <Text color="gray.300">{currentLocation.description}</Text>
-                    <Badge colorScheme="green">
-                      {currentLocation.points} points available
-                    </Badge>
-                  </VStack>
-                </Box>
-                <ImageUploader onPhotoAnalyzed={handlePhotoSubmission} />
-              </VStack>
-            ) : (
-              <Text>Loading next location...</Text>
-            )}
-          </VStack>
+          )}
         </VStack>
       </Container>
     </Box>

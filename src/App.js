@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 
 import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
-import { ChakraProvider, Container, Box, VStack, Heading, Button, HStack, Text } from '@chakra-ui/react';
+import { ChakraProvider, Container, Box, VStack, Heading, Button, HStack, Text, Flex, useToast, Grid, GridItem, Image } from '@chakra-ui/react';
 import { ArrowBackIcon } from '@chakra-ui/icons';
 
 import { extendTheme } from '@chakra-ui/react';
@@ -10,6 +10,7 @@ import Register from './components/Register';
 import PhotoGame from './components/PhotoGame';
 import GameSelector from './components/GameSelector';
 import LocationExplorer from './components/LocationExplorer';
+import Navbar from './components/Navbar';
 import { gameTypes } from './data/gameTypes';
 
 const theme = extendTheme({
@@ -20,7 +21,7 @@ const theme = extendTheme({
   styles: {
     global: {
       body: {
-        bg: 'black',
+        bg: 'gray.900',
         color: 'white',
       },
       '@keyframes pulse': {
@@ -35,6 +36,17 @@ const theme = extendTheme({
         '100%': {
           transform: 'scale(2.5)',
           opacity: 0,
+        },
+      },
+      '@keyframes gradient': {
+        '0%': {
+          backgroundPosition: '0% 50%',
+        },
+        '50%': {
+          backgroundPosition: '100% 50%',
+        },
+        '100%': {
+          backgroundPosition: '0% 50%',
         },
       },
     },
@@ -72,6 +84,11 @@ const theme = extendTheme({
             bg: 'rgba(0, 255, 255, 0.1)',
           },
         },
+        ghost: {
+          _hover: {
+            bg: 'whiteAlpha.200',
+          },
+        },
       },
     },
     Heading: {
@@ -107,7 +124,7 @@ const theme = extendTheme({
 });
 
 // Wrapper component to handle game route parameters
-const GameRoute = ({ onGameComplete, onLogout }) => {
+const GameRoute = ({ onGameComplete, onLogout, currentView, onViewChange }) => {
   const { gameId } = useParams();
   const gameData = gameTypes.find(game => game.id === gameId);
   
@@ -116,13 +133,13 @@ const GameRoute = ({ onGameComplete, onLogout }) => {
   }
 
   return (
-    <Container maxW="container.xl" py={8}>
+    <>
       <PhotoGame
         gameData={gameData}
         onGameComplete={onGameComplete}
         onLogout={onLogout}
       />
-    </Container>
+    </>
   );
 };
 
@@ -134,6 +151,7 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
   const [currentView, setCurrentView] = useState('home'); // 'home', 'game', or 'explorer'
+  const toast = useToast();
 
   useEffect(() => {
     // Check for existing user session
@@ -155,6 +173,15 @@ function App() {
       ?.filter(progress => progress.completed)
       .map(progress => progress.gameId) || [];
     setCompletedGames(completed);
+    
+    toast({
+      title: "Login Successful",
+      description: `Welcome back, ${userData.username}!`,
+      status: "success",
+      duration: 3000,
+      isClosable: true,
+      position: "top",
+    });
   };
 
   const handleLogout = async () => {
@@ -187,6 +214,15 @@ function App() {
       localStorage.removeItem('user');
       setUser(null);
       setCompletedGames([]);
+      
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+        status: "info",
+        duration: 3000,
+        isClosable: true,
+        position: "top",
+      });
     } catch (error) {
       console.error('Error during logout:', error);
       // Still clear the data even if saving fails
@@ -233,190 +269,145 @@ function App() {
     }
   };
 
-  const handleBackToHome = () => {
-    setSelectedGame(null);
-    setCurrentView('home');
+  const handleViewChange = (view) => {
+    setCurrentView(view);
+    if (view === 'home') {
+      setSelectedGame(null);
+    }
   };
 
   const renderContent = () => {
     switch (currentView) {
       case 'game':
         return selectedGame ? (
-          <VStack spacing={6} align="stretch">
-            <Button
-              leftIcon={<ArrowBackIcon />}
-              onClick={handleBackToHome}
-              colorScheme="gray"
-              size="sm"
-              width="fit-content"
-            >
-              Back to Home
-            </Button>
-            <PhotoGame 
-              gameData={selectedGame}
-              onGameComplete={() => handleGameCompletion(selectedGame.id)}
-            />
-          </VStack>
+          <PhotoGame 
+            gameData={selectedGame}
+            onGameComplete={() => handleGameCompletion(selectedGame.id)}
+            onLogout={handleLogout}
+          />
         ) : (
           <GameSelector 
             games={gameTypes}
             onSelectGame={(game) => {
               setSelectedGame(game);
-              setCurrentView('game');
             }}
             completedGames={completedGames}
           />
         );
       case 'explorer':
-        return (
-          <VStack spacing={6} align="stretch">
-            <Button
-              leftIcon={<ArrowBackIcon />}
-              onClick={handleBackToHome}
-              colorScheme="gray"
-              size="sm"
-              width="fit-content"
-            >
-              Back to Home
-            </Button>
-            <LocationExplorer />
-          </VStack>
-        );
+        return <LocationExplorer />;
       default:
         return (
-          <VStack spacing={8}>
-            <HStack spacing={4}>
-              <Button
-                colorScheme="purple"
-                size="lg"
-                onClick={() => setCurrentView('game')}
-                position="relative"
-                overflow="hidden"
-                _before={{
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  bgGradient: 'linear(to-r, purple.600, pink.500)',
-                  borderRadius: 'lg',
-                  transition: 'all 0.3s',
-                }}
-                _hover={{
-                  transform: 'translateY(-5px)',
-                  _before: {
-                    filter: 'brightness(1.2)',
-                  },
-                }}
-                _active={{
-                  transform: 'scale(0.95)',
-                }}
-                px={8}
-                py={6}
-              >
-                <Box
-                  position="relative"
-                  zIndex={1}
-                  display="flex"
-                  alignItems="center"
-                  gap={2}
+          <VStack spacing={8} align="stretch" w="100%">
+            <Box 
+              bgGradient="linear(to-r, gray.900, purple.900, cyan.900, gray.900)"
+              backgroundSize="200% 200%"
+              animation="gradient 15s ease infinite"
+              borderRadius="xl"
+              overflow="hidden"
+              boxShadow="0 4px 30px rgba(0, 0, 0, 0.4)"
+              p={[4, 6, 8]}
+              mb={8}
+            >
+              <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={8} alignItems="center">
+                <GridItem>
+                  <VStack spacing={4} align="flex-start">
+                    <Heading 
+                      size="2xl" 
+                      lineHeight="shorter"
+                      bgGradient="linear(to-r, cyan.400, purple.500, pink.400)"
+                      bgClip="text"
+                      fontWeight="extrabold"
+                    >
+                      Explore Cluj-Napoca Through Photography
+                    </Heading>
+                    <Text fontSize="lg" color="gray.300" lineHeight="tall">
+                      Discover landmarks, solve challenges, and capture beautiful moments in this 
+                      immersive photo exploration game. Visit locations across the city and earn points!
+                    </Text>
+                    <HStack spacing={4} pt={4}>
+                      <Button 
+                        size="lg" 
+                        onClick={() => setCurrentView('game')}
+                        bgGradient="linear(to-r, purple.500, pink.500)"
+                        _hover={{
+                          bgGradient: "linear(to-r, purple.400, pink.400)",
+                          transform: "translateY(-2px)",
+                          boxShadow: "0 10px 20px rgba(159, 122, 234, 0.3)"
+                        }}
+                        px={8}
+                      >
+                        Start Playing
+                      </Button>
+                      <Button 
+                        size="lg" 
+                        variant="outline" 
+                        borderWidth={2}
+                        onClick={() => setCurrentView('explorer')}
+                        _hover={{
+                          bg: "rgba(0, 255, 255, 0.1)",
+                          transform: "translateY(-2px)"
+                        }}
+                      >
+                        Explore Map
+                      </Button>
+                    </HStack>
+                  </VStack>
+                </GridItem>
+                <GridItem display={{ base: "none", md: "block" }}>
+                  <Box 
+                    borderRadius="xl" 
+                    overflow="hidden" 
+                    boxShadow="0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.2)"
+                    transform="rotate(2deg)"
+                    maxH="300px"
+                  >
+                    {/* Placeholder for a city image - replace with your image path */}
+                    <Image
+                      src="https://images.unsplash.com/photo-1585208798174-6cedd86e019a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2073&q=80"
+                      alt="Cluj-Napoca"
+                      objectFit="cover"
+                      w="100%"
+                      h="100%"
+                    />
+                  </Box>
+                </GridItem>
+              </Grid>
+            </Box>
+
+            <Heading size="xl" mb={4}>Featured Games</Heading>
+            <GameSelector 
+              games={gameTypes.slice(0, 4)} // Show only the first 4 games on the homepage
+              onSelectGame={(game) => {
+                setSelectedGame(game);
+                setCurrentView('game');
+              }}
+              completedGames={completedGames}
+              isCompact={true} // Add a compact prop for the homepage view
+            />
+            
+            {completedGames.length > 0 && (
+              <>
+                <Heading size="lg" mt={8} mb={4}>Your Progress</Heading>
+                <Box 
+                  bg="gray.800" 
+                  p={6} 
+                  borderRadius="xl"
+                  boxShadow="0 4px 12px rgba(0, 0, 0, 0.2)"
                 >
-                  <Text fontSize="xl" fontWeight="bold">
-                    Photo Challenge
+                  <Text fontSize="lg" mb={2}>
+                    You've completed {completedGames.length} out of {gameTypes.length} games!
                   </Text>
-                  <Box
-                    as="span"
-                    className="pulse"
-                    position="absolute"
-                    top="-10px"
-                    right="-20px"
-                    width="12px"
-                    height="12px"
-                    borderRadius="full"
-                    bg="pink.400"
-                    _after={{
-                      content: '""',
-                      position: 'absolute',
-                      width: '100%',
-                      height: '100%',
-                      borderRadius: 'full',
-                      animation: 'pulse 2s infinite',
-                      bg: 'pink.400',
-                    }}
-                  />
+                  <Button
+                    variant="outline"
+                    colorScheme="purple"
+                    mt={2}
+                    onClick={() => setCurrentView('game')}
+                  >
+                    Continue Your Journey
+                  </Button>
                 </Box>
-              </Button>
-              <Button
-                colorScheme="cyan"
-                size="lg"
-                onClick={() => setCurrentView('explorer')}
-                position="relative"
-                overflow="hidden"
-                _before={{
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  height: '100%',
-                  bgGradient: 'linear(to-r, cyan.400, blue.500)',
-                  borderRadius: 'lg',
-                  transition: 'all 0.3s',
-                }}
-                _hover={{
-                  transform: 'translateY(-5px)',
-                  _before: {
-                    filter: 'brightness(1.2)',
-                  },
-                }}
-                _active={{
-                  transform: 'scale(0.95)',
-                }}
-                px={8}
-                py={6}
-              >
-                <Box
-                  position="relative"
-                  zIndex={1}
-                  display="flex"
-                  alignItems="center"
-                  gap={2}
-                >
-                  <Text fontSize="xl" fontWeight="bold">
-                    Location Explorer
-                  </Text>
-                  <Box
-                    as="span"
-                    position="absolute"
-                    top="-10px"
-                    right="-20px"
-                    width="12px"
-                    height="12px"
-                    borderRadius="full"
-                    bg="blue.400"
-                    _after={{
-                      content: '""',
-                      position: 'absolute',
-                      width: '100%',
-                      height: '100%',
-                      borderRadius: 'full',
-                      animation: 'pulse 2s infinite',
-                      bg: 'blue.400',
-                    }}
-                  />
-                </Box>
-              </Button>
-            </HStack>
-            {currentView === 'game' && (
-              <GameSelector 
-                games={gameTypes}
-                onSelectGame={(game) => {
-                  setSelectedGame(game);
-                  setCurrentView('game');
-                }}
-                completedGames={completedGames}
-              />
+              </>
             )}
           </VStack>
         );
@@ -426,7 +417,7 @@ function App() {
   return (
     <ChakraProvider theme={theme}>
       <Router>
-        <Box minH="100vh" bg="black">
+        <Box minH="100vh" bg="gray.900">
           <Routes>
             <Route
               path="/login"
@@ -452,142 +443,17 @@ function App() {
               path="/"
               element={
                 user ? (
-                  <Container maxW="container.xl" py={8}>
-                    <VStack spacing={8}>
-                      <HStack spacing={4}>
-                        <Button
-                          colorScheme="purple"
-                          size="lg"
-                          onClick={() => setCurrentView('game')}
-                          position="relative"
-                          overflow="hidden"
-                          _before={{
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            bgGradient: 'linear(to-r, purple.600, pink.500)',
-                            borderRadius: 'lg',
-                            transition: 'all 0.3s',
-                          }}
-                          _hover={{
-                            transform: 'translateY(-5px)',
-                            _before: {
-                              filter: 'brightness(1.2)',
-                            },
-                          }}
-                          _active={{
-                            transform: 'scale(0.95)',
-                          }}
-                          px={8}
-                          py={6}
-                        >
-                          <Box
-                            position="relative"
-                            zIndex={1}
-                            display="flex"
-                            alignItems="center"
-                            gap={2}
-                          >
-                            <Text fontSize="xl" fontWeight="bold">
-                              Photo Challenge
-                            </Text>
-                            <Box
-                              as="span"
-                              className="pulse"
-                              position="absolute"
-                              top="-10px"
-                              right="-20px"
-                              width="12px"
-                              height="12px"
-                              borderRadius="full"
-                              bg="pink.400"
-                              _after={{
-                                content: '""',
-                                position: 'absolute',
-                                width: '100%',
-                                height: '100%',
-                                borderRadius: 'full',
-                                animation: 'pulse 2s infinite',
-                                bg: 'pink.400',
-                              }}
-                            />
-                          </Box>
-                        </Button>
-                        <Button
-                          colorScheme="cyan"
-                          size="lg"
-                          onClick={() => setCurrentView('explorer')}
-                          position="relative"
-                          overflow="hidden"
-                          _before={{
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            bgGradient: 'linear(to-r, cyan.400, blue.500)',
-                            borderRadius: 'lg',
-                            transition: 'all 0.3s',
-                          }}
-                          _hover={{
-                            transform: 'translateY(-5px)',
-                            _before: {
-                              filter: 'brightness(1.2)',
-                            },
-                          }}
-                          _active={{
-                            transform: 'scale(0.95)',
-                          }}
-                          px={8}
-                          py={6}
-                        >
-                          <Box
-                            position="relative"
-                            zIndex={1}
-                            display="flex"
-                            alignItems="center"
-                            gap={2}
-                          >
-                            <Text fontSize="xl" fontWeight="bold">
-                              Location Explorer
-                            </Text>
-                            <Box
-                              as="span"
-                              position="absolute"
-                              top="-10px"
-                              right="-20px"
-                              width="12px"
-                              height="12px"
-                              borderRadius="full"
-                              bg="blue.400"
-                              _after={{
-                                content: '""',
-                                position: 'absolute',
-                                width: '100%',
-                                height: '100%',
-                                borderRadius: 'full',
-                                animation: 'pulse 2s infinite',
-                                bg: 'blue.400',
-                              }}
-                            />
-                          </Box>
-                        </Button>
-                      </HStack>
-                      {currentView === 'game' ? (
-                        <GameSelector
-                          games={gameTypes}
-                          completedGames={completedGames}
-                          onLogout={handleLogout}
-                        />
-                      ) : currentView === 'explorer' ? (
-                        <LocationExplorer />
-                      ) : null}
-                    </VStack>
-                  </Container>
+                  <>
+                    <Navbar 
+                      user={user} 
+                      onLogout={handleLogout} 
+                      onViewChange={handleViewChange}
+                      currentView={currentView}
+                    />
+                    <Container maxW="container.xl" py={8}>
+                      {renderContent()}
+                    </Container>
+                  </>
                 ) : (
                   <Navigate to="/login" replace />
                 )
@@ -597,10 +463,22 @@ function App() {
               path="/game/:gameId"
               element={
                 user ? (
-                  <GameRoute
-                    onGameComplete={handleGameCompletion}
-                    onLogout={handleLogout}
-                  />
+                  <>
+                    <Navbar 
+                      user={user} 
+                      onLogout={handleLogout}
+                      onViewChange={handleViewChange}
+                      currentView="game"
+                    />
+                    <Container maxW="container.xl" py={8}>
+                      <GameRoute
+                        onGameComplete={handleGameCompletion}
+                        onLogout={handleLogout}
+                        currentView={currentView}
+                        onViewChange={handleViewChange}
+                      />
+                    </Container>
+                  </>
                 ) : (
                   <Navigate to="/login" replace />
                 )

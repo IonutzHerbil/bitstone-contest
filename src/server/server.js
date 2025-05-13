@@ -23,11 +23,17 @@ mongoose.connect(process.env.MONGODB_URI, {
 .catch((error) => console.error('MongoDB connection error:', error));
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '0' }));
+app.use(express.urlencoded({ limit: '0', extended: true }));
 
 // Configure multer for handling file uploads
 const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
+const upload = multer({ 
+  storage: storage,
+  limits: {
+    fileSize: Infinity, // No file size limit
+  }
+});
 
 // Initialize OpenAI
 const openai = new OpenAI({
@@ -75,17 +81,21 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
 
     try {
       console.log('Calling OpenAI API...');
-      console.log('Using model:', "gpt-4-vision");
+      console.log('Using model:', "gpt-4o");
       // Call OpenAI API to analyze the image
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
+            role: "system",
+            content: "You are a landmark identification system for Cluj-Napoca, Romania. You only respond with valid, structured JSON objects matching the exact format requested. Focus on identifying landmarks, monuments, buildings, and locations specifically from Cluj-Napoca."
+          },
+          {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Please identify what landmark or location this might be. Return the response in this exact JSON format: {\"name\": \"full name of the landmark\", \"description\": \"brief description\", \"location\": \"city, country\"}. Keep the description under 100 words.",
+                text: "Look at this image and identify the landmark or location. Respond ONLY with a single JSON object in this exact format: {\"name\": \"landmark name\", \"description\": \"brief factual description\", \"location\": \"city, country\"}. Keep description under 100 words. No other text, no explanations, just the JSON."
               },
               {
                 type: "image_url",
@@ -97,7 +107,8 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
           },
         ],
         max_tokens: 500,
-        temperature: 0.7,
+        response_format: { type: "json_object" },
+        temperature: 0.3,
       });
       console.log('OpenAI API response received');
 
@@ -105,15 +116,29 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
       let locationInfo;
       try {
         console.log('Raw OpenAI response:', response.choices[0].message.content);
-        locationInfo = JSON.parse(response.choices[0].message.content);
+        const content = response.choices[0].message.content;
+        
+        // Clean the response if necessary (remove any markdown or non-JSON content)
+        let jsonContent = content;
+        if (content.includes("```json")) {
+          jsonContent = content.split("```json")[1].split("```")[0].trim();
+        } else if (content.includes("```")) {
+          jsonContent = content.split("```")[1].split("```")[0].trim();
+        }
+        
+        locationInfo = JSON.parse(jsonContent);
         console.log('Parsed location info:', locationInfo);
       } catch (parseError) {
         console.error('Error parsing OpenAI response:', parseError);
         console.error('Raw content:', response.choices[0].message.content);
-        return res.status(500).json({ 
-          error: 'Invalid response format from OpenAI',
-          details: parseError.message
-        });
+        
+        // Create a default location object
+        locationInfo = {
+          name: "Unidentified Landmark",
+          description: "This appears to be an interesting location that couldn't be specifically identified.",
+          location: "Unknown Location"
+        };
+        console.log('Created fallback location info:', locationInfo);
       }
       
       // Get coordinates
@@ -173,14 +198,17 @@ app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
     // Call OpenAI API to analyze the image
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
-
       messages: [
+        {
+          role: "system",
+          content: "You are a landmark identification system specializing in architectural and historical landmarks. Provide detailed, factual information in structured JSON format."
+        },
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: "This image is from Cluj-Napoca, Romania. Please identify what landmark or location this might be and provide a detailed description of what you see in the image. Focus on architectural details and historical significance if visible.",
+              text: "This image is from Cluj-Napoca, Romania. Identify what landmark or location this might be and provide a detailed description of architectural details and historical significance. Response must be in JSON format: {\"name\": \"landmark name\", \"description\": \"detailed description\", \"historicalContext\": \"brief history\"}."
             },
             {
               type: "image_url",
@@ -192,14 +220,34 @@ app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
         },
       ],
       max_tokens: 500,
-      temperature: 0.7,
-      presence_penalty: 0.0,
-      frequency_penalty: 0.0,
+      response_format: { type: "json_object" },
+      temperature: 0.3,
     });
 
-    res.json({
-      analysis: response.choices[0].message.content
-    });
+    try {
+      // Extract and clean the JSON
+      const content = response.choices[0].message.content;
+      let analysis = content;
+      
+      // Try to extract JSON if it's wrapped in markdown code blocks
+      if (content.includes("```json")) {
+        analysis = content.split("```json")[1].split("```")[0].trim();
+      } else if (content.includes("```")) {
+        analysis = content.split("```")[1].split("```")[0].trim();
+      }
+      
+      // Try to parse it as JSON
+      try {
+        const jsonAnalysis = JSON.parse(analysis);
+        res.json({ analysis: jsonAnalysis });
+      } catch (parseError) {
+        // If JSON parsing fails, return the raw content
+        res.json({ analysis: content });
+      }
+    } catch (error) {
+      console.error('Error processing analysis response:', error);
+      res.json({ analysis: response.choices[0].message.content });
+    }
   } catch (error) {
     console.error('Error analyzing image:', error);
     res.status(500).json({ error: 'Error analyzing image', details: error.message });
@@ -225,6 +273,86 @@ app.get('/api/test-openai', async (req, res) => {
     console.error('OpenAI API Key test error:', error);
     res.status(500).json({ 
       error: 'Error testing OpenAI API key',
+      details: error.message
+    });
+  }
+});
+
+// Add a test endpoint to verify image processing capabilities
+app.post('/api/test-vision', upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    // Convert the buffer to base64
+    const base64Image = req.file.buffer.toString('base64');
+    console.log('Test image converted to base64, size:', base64Image.length);
+
+    // Call OpenAI API with a simple image description request
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a visual recognition system that only responds with valid structured JSON. Never include explanations or context around your answer."
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: "What's in this image? Respond ONLY with this exact JSON format: {\"description\": \"your description here\"}. No markdown formatting, no explanations, just the JSON object."
+            },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${req.file.mimetype};base64,${base64Image}`
+              }
+            },
+          ],
+        },
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 300,
+      temperature: 0.3,
+    });
+
+    console.log('Test vision API response:', response.choices[0].message.content);
+    
+    // Parse the response to verify it's valid JSON
+    try {
+      const content = response.choices[0].message.content;
+      
+      // Clean the response if necessary
+      let jsonContent = content;
+      if (content.includes("```json")) {
+        jsonContent = content.split("```json")[1].split("```")[0].trim();
+      } else if (content.includes("```")) {
+        jsonContent = content.split("```")[1].split("```")[0].trim();
+      }
+      
+      const json = JSON.parse(jsonContent);
+      res.json({ 
+        status: 'success', 
+        message: 'Image processing working correctly',
+        result: json
+      });
+    } catch (parseError) {
+      console.error('Error parsing test vision response:', parseError);
+      res.status(200).json({ 
+        status: 'warning', 
+        message: 'OpenAI returned non-JSON response',
+        raw: response.choices[0].message.content,
+        fallback: {
+          description: "Image content could not be parsed correctly"
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Test vision API error:', error);
+    res.status(500).json({ 
+      error: 'Error testing vision API',
       details: error.message
     });
   }
