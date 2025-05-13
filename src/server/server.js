@@ -2,26 +2,37 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const { OpenAI } = require('openai');
-const dotenv = require('dotenv');
-const mongoose = require('mongoose');
-const authRoutes = require('./routes/auth');
 const axios = require('axios');
+const dotenv = require('dotenv');
+const fs = require('fs');
+const path = require('path');
 
-// Load environment variables
-dotenv.config();
-console.log('OpenAI API Key configured:', !!process.env.OPENAI_API_KEY);
+// Load environment variables from the root directory
+const envPath = path.resolve(__dirname, '../../.env');
+dotenv.config({ path: envPath });
+
+// Read API key directly from .env file
+let apiKey;
+try {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  const apiKeyMatch = envContent.match(/OPENAI_API_KEY=(.+)/);
+  if (apiKeyMatch) {
+    apiKey = apiKeyMatch[1].trim();
+    console.log('API Key loaded successfully');
+  }
+} catch (error) {
+  console.error('Error reading .env file:', error);
+}
+
+if (!apiKey) {
+  console.error('Error: OPENAI_API_KEY not found in .env file');
+  process.exit(1);
+}
 
 const app = express();
 const port = 5000;
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log('Connected to MongoDB'))
-.catch((error) => console.error('MongoDB connection error:', error));
-
+// Use CORS for cross-origin requests
 app.use(cors());
 app.use(express.json());
 
@@ -29,13 +40,11 @@ app.use(express.json());
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
-// Initialize OpenAI
+// Initialize OpenAI with the API key
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: apiKey
 });
 
-// Authentication routes
-app.use('/api/auth', authRoutes);
 // Helper function to get coordinates from location name
 async function getCoordinates(locationName) {
   try {
@@ -63,19 +72,12 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
     }
     console.log('File received:', req.file.mimetype, req.file.size, 'bytes');
 
-    // Check if OpenAI API key is configured
-    if (!process.env.OPENAI_API_KEY) {
-      console.error('OpenAI API key is not configured');
-      return res.status(500).json({ error: 'OpenAI API key is not configured' });
-    }
-
     // Convert the buffer to base64
     const base64Image = req.file.buffer.toString('base64');
     console.log('Image converted to base64');
 
     try {
       console.log('Calling OpenAI API...');
-      console.log('Using model:', "gpt-4-vision");
       // Call OpenAI API to analyze the image
       const response = await openai.chat.completions.create({
         model: "gpt-4o",
@@ -85,7 +87,7 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
             content: [
               {
                 type: "text",
-                text: "Please identify what landmark or location this might be. Return the response in this exact JSON format: {\"name\": \"full name of the landmark\", \"description\": \"brief description\", \"location\": \"city, country\"}. Keep the description under 100 words.",
+                text: "Please identify what landmark or location this might be. Return the response in this exact JSON format: {\"name\": \"full name of the landmark\", \"description\": \"detailed description about its history and significance\", \"location\": \"city, country\"}. Be as accurate as possible.",
               },
               {
                 type: "image_url",
@@ -96,8 +98,8 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
             ],
           },
         ],
-        max_tokens: 500,
-        temperature: 0.7,
+        max_tokens: 800,
+        temperature: 0.5,
       });
       console.log('OpenAI API response received');
 
@@ -105,14 +107,31 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
       let locationInfo;
       try {
         console.log('Raw OpenAI response:', response.choices[0].message.content);
-        locationInfo = JSON.parse(response.choices[0].message.content);
+        const content = response.choices[0].message.content;
+        
+        // Extract JSON from markdown code blocks if present
+        let jsonContent = content;
+        const jsonMatch = content.match(/```(?:json)?\s*({[\s\S]*?})\s*```/);
+        if (jsonMatch && jsonMatch[1]) {
+          jsonContent = jsonMatch[1];
+        }
+        
+        locationInfo = JSON.parse(jsonContent);
         console.log('Parsed location info:', locationInfo);
       } catch (parseError) {
         console.error('Error parsing OpenAI response:', parseError);
         console.error('Raw content:', response.choices[0].message.content);
-        return res.status(500).json({ 
-          error: 'Invalid response format from OpenAI',
-          details: parseError.message
+        
+        // Attempt to extract information even if JSON parsing fails
+        const rawContent = response.choices[0].message.content;
+        return res.json({ 
+          id: Math.random().toString(36).substring(2, 11),
+          name: "Unknown Landmark",
+          description: rawContent,
+          location: "Unknown Location",
+          coordinates: null,
+          imageUrl: `data:${req.file.mimetype};base64,${base64Image}`,
+          difficulty: 'medium',
         });
       }
       
@@ -122,7 +141,7 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
       console.log('Coordinates:', coordinates);
       
       // Generate a unique ID for the location
-      const locationId = Math.random().toString(36).substr(2, 9);
+      const locationId = Math.random().toString(36).substring(2, 11);
 
       // Create temporary URL for the uploaded image
       const imageUrl = `data:${req.file.mimetype};base64,${base64Image}`;
@@ -142,20 +161,29 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
     } catch (openaiError) {
       console.error('OpenAI API Error:', openaiError);
       console.error('Error details:', openaiError.message);
-      if (openaiError.response) {
-        console.error('OpenAI response data:', openaiError.response.data);
-      }
-      return res.status(500).json({ 
-        error: 'Error calling OpenAI API',
-        details: openaiError.message 
+      
+      // Return a fallback response instead of an error
+      return res.json({ 
+        id: Math.random().toString(36).substring(2, 11),
+        name: "Landmark Detection Failed",
+        description: "We couldn't identify this landmark. Please try uploading a clearer image or a more recognizable landmark.",
+        location: "Unknown Location",
+        coordinates: null,
+        imageUrl: `data:${req.file.mimetype};base64,${base64Image}`,
+        difficulty: 'easy',
       });
     }
   } catch (error) {
     console.error('Server Error:', error);
-    console.error('Full error object:', JSON.stringify(error, null, 2));
-    res.status(500).json({ 
-      error: 'Error detecting location',
-      details: error.message 
+    // Return a user-friendly response even on server error
+    return res.json({ 
+      id: Math.random().toString(36).substring(2, 11),
+      name: "Landmark Detection Failed",
+      description: "We couldn't process this image. Please try again with a different photo.",
+      location: "Unknown Location",
+      coordinates: null,
+      imageUrl: `data:${req.file.mimetype};base64,${base64Image}`,
+      difficulty: 'easy',
     });
   }
 });
@@ -173,14 +201,13 @@ app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
     // Call OpenAI API to analyze the image
     const response = await openai.chat.completions.create({
       model: "gpt-4o",
-
       messages: [
         {
           role: "user",
           content: [
             {
               type: "text",
-              text: "This image is from Cluj-Napoca, Romania. Please identify what landmark or location this might be and provide a detailed description of what you see in the image. Focus on architectural details and historical significance if visible.",
+              text: "Please identify what landmark or location this might be and provide a detailed description of what you see in the image. Focus on architectural details, historical significance, and any other notable features.",
             },
             {
               type: "image_url",
@@ -191,10 +218,8 @@ app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
           ],
         },
       ],
-      max_tokens: 500,
-      temperature: 0.7,
-      presence_penalty: 0.0,
-      frequency_penalty: 0.0,
+      max_tokens: 800,
+      temperature: 0.5,
     });
 
     res.json({
@@ -202,7 +227,9 @@ app.post('/api/analyze-image', upload.single('image'), async (req, res) => {
     });
   } catch (error) {
     console.error('Error analyzing image:', error);
-    res.status(500).json({ error: 'Error analyzing image', details: error.message });
+    res.json({ 
+      analysis: "We couldn't analyze this image. Please try again with a different photo." 
+    });
   }
 });
 
@@ -211,7 +238,7 @@ app.get('/api/test-openai', async (req, res) => {
   try {
     console.log('Testing OpenAI API key...');
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         {
           role: "user",

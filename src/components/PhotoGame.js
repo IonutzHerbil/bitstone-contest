@@ -11,8 +11,12 @@ import {
   useToast,
   Button,
   Container,
+  Spinner,
+  HStack,
+  Fade,
+  IconButton,
 } from '@chakra-ui/react';
-import { ArrowBackIcon } from '@chakra-ui/icons';
+import { ArrowBackIcon, CheckCircleIcon, CloseIcon } from '@chakra-ui/icons';
 import { useNavigate } from 'react-router-dom';
 import ImageUploader from './ImageUploader';
 import { saveGameProgress } from '../utils/progressUtils';
@@ -22,6 +26,11 @@ const PhotoGame = ({ gameData, onGameComplete, onLogout }) => {
   const [currentLocation, setCurrentLocation] = useState(null);
   const [completedLocations, setCompletedLocations] = useState([]);
   const [gameStarted, setGameStarted] = useState(false);
+  const [analyzingPhoto, setAnalyzingPhoto] = useState(false);
+  const [processingProgress, setProcessingProgress] = useState(0);
+  const [analysisStage, setAnalysisStage] = useState('');
+  const [locationMatched, setLocationMatched] = useState(null);
+  const [cancelAnalysis, setCancelAnalysis] = useState(null);
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -106,90 +115,204 @@ const PhotoGame = ({ gameData, onGameComplete, onLogout }) => {
     setCurrentLocation(randomLocation);
   };
 
-  const handlePhotoSubmission = async (imageAnalysis) => {
-    if (!currentLocation) return;
-
-    const locationMatches = currentLocation.keywords.some(keyword =>
-      imageAnalysis.toLowerCase().includes(keyword.toLowerCase())
-    );
+  const simulateProgress = () => {
+    setProcessingProgress(0);
+    setAnalysisStage('starting');
     
-    if (locationMatches) {
-      const newScore = score + currentLocation.points;
-      const newCompletedLocations = [...completedLocations, currentLocation.id];
-      setScore(newScore);
-      setCompletedLocations(newCompletedLocations);
-      
-      try {
-        // Save progress after each successful submission
-        await saveGameProgress(
-          gameData.id,
-          newCompletedLocations,
-          newCompletedLocations.length === gameData.locations.length // Mark as completed if all locations are done
-        );
-
-        // Update user data in localStorage to reflect new progress
-        const userData = JSON.parse(localStorage.getItem('user'));
-        const gameProgressIndex = userData.gameProgress.findIndex(g => g.gameId === gameData.id);
-        const updatedProgress = {
-          gameId: gameData.id,
-          completed: newCompletedLocations.length === gameData.locations.length,
-          completedLocations: newCompletedLocations.map(locId => ({
-            locationId: locId,
-            timestamp: new Date()
-          }))
-        };
-
-        if (gameProgressIndex >= 0) {
-          userData.gameProgress[gameProgressIndex] = updatedProgress;
-        } else {
-          userData.gameProgress.push(updatedProgress);
+    // Create a progress simulation
+    const progressInterval = setInterval(() => {
+      setProcessingProgress((prev) => {
+        if (prev < 30) {
+          setAnalysisStage('analyzing');
+          const increment = Math.random() * 5;
+          return prev + increment;
+        } else if (prev < 60) {
+          setAnalysisStage('comparing');
+          const increment = Math.random() * 5;
+          return prev + increment;
+        } else if (prev < 90) {
+          setAnalysisStage('verifying');
+          const increment = Math.random() * 3;
+          return prev + increment;
+        } else if (prev < 95) {
+          setAnalysisStage('finalizing');
+          const increment = Math.random() * 2;
+          return prev + increment;
         }
-        localStorage.setItem('user', JSON.stringify(userData));
-        
-        // Trigger update event
-        window.dispatchEvent(new Event('userDataUpdate'));
-        
-        toast({
-          title: "Photo Verified!",
-          description: `+${currentLocation.points} points! Great photo of ${currentLocation.name}!`,
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
+        return 95;
+      });
+    }, 200);
+    
+    return progressInterval;
+  };
 
-        if (newCompletedLocations.length === gameData.locations.length) {
-          toast({
-            title: "Congratulations!",
-            description: `You've completed ${gameData.name} with ${newScore} points!`,
-            status: "success",
-            duration: null,
-            isClosable: true,
-          });
-          setGameStarted(false);
-          onGameComplete(gameData.id);
-        } else {
-          selectNewLocation();
-        }
-      } catch (error) {
-        console.error('Error saving progress:', error);
-        toast({
-          title: "Error Saving Progress",
-          description: "Your progress couldn't be saved, but you can continue playing.",
-          status: "warning",
-          duration: 5000,
-          isClosable: true,
-        });
-        selectNewLocation();
-      }
-    } else {
+  const handleCancelAnalysis = () => {
+    if (cancelAnalysis && typeof cancelAnalysis === 'function') {
+      cancelAnalysis();
+      setCancelAnalysis(null);
       toast({
-        title: "Not Quite Right",
-        description: "The photo doesn't match the location. Try taking another photo!",
-        status: "warning",
-        duration: 3000,
+        title: "Analysis Cancelled",
+        description: "You can take another photo now.",
+        status: "info",
+        duration: 2000,
         isClosable: true,
       });
     }
+  };
+
+  const handlePhotoSubmissionWithCancel = async (imageAnalysis) => {
+    // Clear any previous cancel function
+    if (cancelAnalysis) {
+      cancelAnalysis();
+      setCancelAnalysis(null);
+    }
+    
+    // Store the new cancel function
+    const cancel = handlePhotoSubmission(imageAnalysis);
+    setCancelAnalysis(() => cancel);
+  };
+
+  const handlePhotoSubmission = async (imageAnalysis) => {
+    if (!currentLocation) return;
+    
+    // Clear any existing analysis state first
+    setAnalyzingPhoto(false);
+    setProcessingProgress(0);
+    setAnalysisStage('');
+    setLocationMatched(null);
+    
+    // Start fresh analysis
+    setAnalyzingPhoto(true);
+    const progressInterval = simulateProgress();
+    
+    // Keep track of whether this analysis was cancelled
+    let isCancelled = false;
+
+    // Deterministic location matching based on current location and analysis
+    let locationMatches = false;
+    
+    try {
+      // The imageAnalysis contains the detected landmark text
+      const analysisText = imageAnalysis.toLowerCase();
+      
+      // Get keywords from the current location that must be matched
+      const locationName = currentLocation.name.toLowerCase();
+      
+      // Check if the analysis text contains the location name
+      locationMatches = analysisText.includes(locationName);
+      
+      // If the user is taking a photo of the right landmark,
+      // their image analysis should contain the location name
+      // This is a simple but effective check
+      
+    } catch (error) {
+      console.error('Error in location matching:', error);
+      // Default to not matched if there's an error
+      locationMatches = false;
+    }
+    
+    // Reduce the processing time to avoid stuck states (previously 3000ms)
+    setTimeout(() => {
+      // Check if this analysis was cancelled before proceeding
+      if (isCancelled) return;
+      
+      clearInterval(progressInterval);
+      setProcessingProgress(100);
+      setAnalysisStage('complete');
+      
+      setLocationMatched(locationMatches);
+      
+      // Reduce the final display time as well (previously 1000ms)
+      setTimeout(() => {
+        // Check again if cancelled
+        if (isCancelled) return;
+        
+        if (locationMatches) {
+          // Success! They found the location
+          const newScore = score + currentLocation.points;
+          const newCompletedLocations = [...completedLocations, currentLocation.id];
+          setScore(newScore);
+          setCompletedLocations(newCompletedLocations);
+          
+          // Save progress after each successful submission
+          saveGameProgress(
+            gameData.id,
+            newCompletedLocations,
+            newCompletedLocations.length === gameData.locations.length
+          ).then(() => {
+            // Dispatch update event
+            window.dispatchEvent(new Event('userDataUpdate'));
+            
+            toast({
+              title: "Photo Verified!",
+              description: `+${currentLocation.points} points! Great photo of ${currentLocation.name}!`,
+              status: "success",
+              duration: 3000,
+              isClosable: true,
+            });
+    
+            if (newCompletedLocations.length === gameData.locations.length) {
+              toast({
+                title: "Congratulations!",
+                description: `You've completed ${gameData.name} with ${newScore} points!`,
+                status: "success",
+                duration: null,
+                isClosable: true,
+              });
+              setGameStarted(false);
+              onGameComplete(gameData.id);
+            } else {
+              // Reset for next location
+              setAnalyzingPhoto(false);
+              setProcessingProgress(0);
+              setAnalysisStage('');
+              setLocationMatched(null);
+              selectNewLocation();
+            }
+          }).catch(error => {
+            console.error('Error saving progress:', error);
+            toast({
+              title: "Error Saving Progress",
+              description: "Your progress couldn't be saved, but you can continue playing.",
+              status: "warning",
+              duration: 5000,
+              isClosable: true,
+            });
+            
+            // Reset for next location
+            setAnalyzingPhoto(false);
+            setProcessingProgress(0);
+            setAnalysisStage('');
+            setLocationMatched(null);
+            selectNewLocation();
+          });
+        } else {
+          toast({
+            title: "Not Quite Right",
+            description: "The photo doesn't match the location. Try taking another photo!",
+            status: "warning",
+            duration: 3000,
+            isClosable: true,
+          });
+          
+          // Reset state but keep the same location
+          setAnalyzingPhoto(false);
+          setProcessingProgress(0);
+          setAnalysisStage('');
+          setLocationMatched(null);
+        }
+      }, 500); // Faster feedback (reduced from 1000ms)
+    }, 1500); // Faster processing (reduced from 3000ms)
+    
+    // Return a cancel function that components can use
+    return () => {
+      isCancelled = true;
+      clearInterval(progressInterval);
+      setAnalyzingPhoto(false);
+      setProcessingProgress(0);
+      setAnalysisStage('');
+      setLocationMatched(null);
+    };
   };
 
   const startGame = () => {
@@ -250,130 +373,203 @@ const PhotoGame = ({ gameData, onGameComplete, onLogout }) => {
     }
   };
 
+  const renderAnalysisStage = () => {
+    const stages = {
+      'starting': 'Initializing analysis...',
+      'analyzing': 'Analyzing image features...',
+      'comparing': 'Comparing with landmark database...',
+      'verifying': 'Verifying location match...',
+      'finalizing': 'Finalizing results...',
+      'complete': locationMatched ? 'Location verified!' : 'Verification failed'
+    };
+    
+    return stages[analysisStage] || 'Processing...';
+  };
+
   return (
-    <Box minH="100vh" bg="black" color="white">
-      <Container maxW="container.xl" py={8}>
-        <VStack spacing={8} align="stretch">
-          <Heading 
-            textAlign="center"
-            bgGradient="linear(to-r, cyan.400, purple.500)" 
-            bgClip="text" 
-            fontSize={["2xl", "3xl"]}
-            fontWeight="extrabold"
+    <Container maxW="container.xl" py={8}>
+      <Box mb={8} display="flex" alignItems="center">
+        <Button
+          leftIcon={<ArrowBackIcon />}
+          variant="ghost"
+          onClick={handleBackToGames}
+          colorScheme="cyan"
+        >
+          Back to Games
+        </Button>
+      </Box>
+
+      {!gameStarted ? (
+        <VStack spacing={8} align="center" justify="center" py={16}>
+          <VStack spacing={4} textAlign="center" maxW="700px">
+            <Heading 
+              bgGradient="linear(to-r, cyan.400, purple.500)"
+              bgClip="text"
+              size="xl"
+            >
+              {gameData.name}
+            </Heading>
+            <Text fontSize="lg" color="gray.300">
+              {gameData.description}
+            </Text>
+            <Badge colorScheme="purple" fontSize="md" px={3} py={1}>
+              {gameData.difficulty}
+            </Badge>
+          </VStack>
+
+          <Button
+            colorScheme="cyan"
+            size="lg"
+            onClick={startGame}
+            width="200px"
           >
-            Photo Challenge & Explorer
-          </Heading>
-          
-          <VStack spacing={6} width="100%" align="stretch">
+            Start Game
+          </Button>
+
+          {completedLocations.length > 0 && (
+            <Box
+              mt={8}
+              p={6}
+              bg="gray.800"
+              borderRadius="xl"
+              borderWidth="1px"
+              borderColor="cyan.800"
+              width="100%"
+              maxW="500px"
+            >
+              <VStack spacing={4} align="stretch">
+                <Heading size="md" color="cyan.300">Your Progress</Heading>
+                <Text>
+                  You've discovered {completedLocations.length} of {gameData.locations.length} locations
+                </Text>
+                <Progress
+                  value={(completedLocations.length / gameData.locations.length) * 100}
+                  size="sm"
+                  colorScheme="cyan"
+                  borderRadius="full"
+                />
+                <Text color="purple.300">
+                  Current Score: {score} points
+                </Text>
+              </VStack>
+            </Box>
+          )}
+        </VStack>
+      ) : (
+        <VStack spacing={8} align="stretch">
+          <Box>
             <Grid templateColumns="repeat(3, 1fr)" gap={4}>
               <GridItem>
-                <Button
-                  leftIcon={<ArrowBackIcon />}
-                  onClick={handleBackToGames}
-                  colorScheme="gray"
-                  size="sm"
-                >
-                  Back to Games
-                </Button>
+                <VStack align="start">
+                  <Text color="gray.400">Score</Text>
+                  <Heading size="lg" bgGradient="linear(to-r, cyan.400, purple.500)" bgClip="text">
+                    {score}
+                  </Heading>
+                </VStack>
               </GridItem>
-              <GridItem textAlign="center">
-                <Heading 
-                  size="md"
-                  bgGradient="linear(to-r, cyan.400, purple.500)"
-                  bgClip="text"
-                >
-                  {gameData.name}
-                </Heading>
+              <GridItem>
+                <VStack align="center">
+                  <Text color="gray.400">Progress</Text>
+                  <Progress
+                    value={((completedLocations?.length || 0) / gameData.locations.length) * 100}
+                    width="100%"
+                    colorScheme="cyan"
+                    borderRadius="full"
+                  />
+                  <Text color="gray.400" fontSize="sm">
+                    {completedLocations.length} / {gameData.locations.length} Locations
+                  </Text>
+                </VStack>
               </GridItem>
-              <GridItem textAlign="right">
-                <Button
-                  colorScheme="red"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                >
-                  Logout
-                </Button>
+              <GridItem>
+                <VStack align="end">
+                  <Text color="gray.400">Total Available</Text>
+                  <Text color="purple.400">{totalPoints} pts</Text>
+                </VStack>
               </GridItem>
             </Grid>
+          </Box>
 
-            <Box>
-              <Grid templateColumns="repeat(3, 1fr)" gap={4}>
-                <GridItem>
-                  <VStack align="start">
-                    <Text color="gray.400">Score</Text>
-                    <Heading size="lg" bgGradient="linear(to-r, cyan.400, purple.500)" bgClip="text">
-                      {score}
-                    </Heading>
-                  </VStack>
-                </GridItem>
-                <GridItem>
-                  <VStack align="center">
-                    <Text color="gray.400">Progress</Text>
-                    <Progress
-                      value={((completedLocations?.length || 0) / gameData.locations.length) * 100}
-                      width="100%"
-                      colorScheme="cyan"
-                      borderRadius="full"
-                    />
-                    <Text color="gray.400" fontSize="sm">
-                      {completedLocations.length} / {gameData.locations.length} Locations
-                    </Text>
-                  </VStack>
-                </GridItem>
-                <GridItem>
-                  <VStack align="end">
-                    <Text color="gray.400">Total Available</Text>
-                    <Text color="purple.400">{totalPoints} pts</Text>
-                  </VStack>
-                </GridItem>
-              </Grid>
-            </Box>
-
-            {!gameStarted ? (
-              <VStack spacing={4} bg="gray.800" p={6} borderRadius="xl">
-                <Text textAlign="center" color="gray.300">
-                  {gameData.description}
-                </Text>
-                <Badge colorScheme={
-                  gameData.difficulty.toLowerCase() === 'easy' ? 'green' :
-                  gameData.difficulty.toLowerCase() === 'medium' ? 'yellow' : 'red'
-                }>
-                  {gameData.difficulty} Difficulty
-                </Badge>
-                <Button
-                  colorScheme="cyan"
-                  size="lg"
-                  onClick={startGame}
-                  _hover={{ transform: 'scale(1.05)' }}
-                  transition="all 0.2s"
-                >
-                  {completedLocations.length > 0 ? 'Continue Game' : 'Start Challenge'}
-                </Button>
-              </VStack>
-            ) : currentLocation ? (
-              <VStack spacing={4}>
-                <Box bg="gray.800" p={6} borderRadius="xl" width="100%">
-                  <VStack align="start" spacing={3}>
-                    <Badge colorScheme="purple" fontSize="md" p={2}>
-                      Current Challenge
-                    </Badge>
-                    <Heading size="md">{currentLocation.name}</Heading>
-                    <Text color="gray.300">{currentLocation.description}</Text>
-                    <Badge colorScheme="green">
-                      {currentLocation.points} points available
-                    </Badge>
-                  </VStack>
+          {currentLocation && (
+            <Box
+              bg="gray.800"
+              p={6}
+              borderRadius="xl"
+              borderWidth="1px"
+              borderColor="cyan.900"
+            >
+              <VStack spacing={6} align="stretch">
+                <Box>
+                  <Text color="gray.400" fontSize="sm">FIND THIS LOCATION</Text>
+                  <Heading size="lg" color="white" mb={2}>
+                    {currentLocation.name}
+                  </Heading>
+                  <Text color="gray.300">
+                    {currentLocation.description}
+                  </Text>
                 </Box>
-                <ImageUploader onPhotoAnalyzed={handlePhotoSubmission} />
+                
+                <Box
+                  bg="rgba(0, 178, 255, 0.05)"
+                  p={4}
+                  borderRadius="md"
+                  borderWidth="1px"
+                  borderColor="rgba(0, 178, 255, 0.2)"
+                >
+                  <Text color="cyan.300" fontWeight="bold" mb={1}>
+                    Worth {currentLocation.points} points
+                  </Text>
+                  <Text color="gray.400" fontSize="sm">
+                    Take a photo of this location to earn points
+                  </Text>
+                </Box>
+
+                {analyzingPhoto ? (
+                  <Box>
+                    <VStack spacing={4} align="center" py={6}>
+                      <Progress
+                        value={processingProgress}
+                        width="100%"
+                        size="sm"
+                        colorScheme="purple"
+                        hasStripe
+                        isAnimated
+                      />
+                      
+                      <HStack spacing={3}>
+                        {analysisStage !== 'complete' ? (
+                          <Spinner size="sm" color="cyan.400" />
+                        ) : (
+                          <CheckCircleIcon color="green.400" />
+                        )}
+                        <Text color="gray.300">{renderAnalysisStage()}</Text>
+                        
+                        <IconButton
+                          icon={<CloseIcon />}
+                          size="sm"
+                          aria-label="Cancel analysis"
+                          colorScheme="red"
+                          variant="ghost"
+                          onClick={handleCancelAnalysis}
+                          ml={2}
+                          isDisabled={analysisStage === 'complete'}
+                        />
+                      </HStack>
+                    </VStack>
+                  </Box>
+                ) : (
+                  <Box py={4}>
+                    <ImageUploader
+                      onPhotoAnalyzed={handlePhotoSubmissionWithCancel}
+                    />
+                  </Box>
+                )}
               </VStack>
-            ) : (
-              <Text>Loading next location...</Text>
-            )}
-          </VStack>
+            </Box>
+          )}
         </VStack>
-      </Container>
-    </Box>
+      )}
+    </Container>
   );
 };
 

@@ -1,3 +1,0 @@
-@echo off
-echo Starting mock authentication server...
-node src/server/mock-auth-server.js 

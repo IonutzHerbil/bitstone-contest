@@ -228,6 +228,42 @@ const landmarks = [
       lat: 46.7692,
       lon: 23.5901
     }
+  },
+  {
+    name: "Eiffel Tower",
+    description: "Iconic wrought-iron lattice tower located on the Champ de Mars in Paris. Named after engineer Gustave Eiffel, it was constructed from 1887-1889 as the entrance to the 1889 World's Fair. Standing at 330 meters tall, it was the tallest man-made structure in the world for 41 years until the completion of the Chrysler Building in New York City.",
+    location: "Paris, France",
+    coordinates: {
+      lat: 48.8584,
+      lon: 2.2945
+    }
+  },
+  {
+    name: "Statue of Liberty",
+    description: "Colossal neoclassical sculpture on Liberty Island in New York Harbor. A gift from the people of France to the United States, it was designed by French sculptor Frédéric Auguste Bartholdi and built by Gustave Eiffel. The copper statue, dedicated in 1886, depicts Libertas, the Roman goddess of liberty, holding a torch and tablet inscribed with the date of American independence.",
+    location: "New York City, USA",
+    coordinates: {
+      lat: 40.6892,
+      lon: -74.0445
+    }
+  },
+  {
+    name: "Colosseum",
+    description: "Ancient Roman amphitheater built of travertine limestone, tuff, and brick-faced concrete. Construction began under Emperor Vespasian in 72 AD and was completed in 80 AD under his successor Titus. The elliptical structure could hold between 50,000-80,000 spectators and was used for gladiatorial contests, public spectacles, executions, and dramas based on Classical mythology.",
+    location: "Rome, Italy",
+    coordinates: {
+      lat: 41.8902,
+      lon: 12.4922
+    }
+  },
+  {
+    name: "Great Wall of China",
+    description: "Ancient defensive structure built to protect Chinese states and empires against raids and invasions. It consists of numerous walls built beginning in the 7th century BC, with the most famous sections built during the Ming Dynasty (1368-1644). Stretching approximately 13,171 miles from east to west, it's the world's longest wall and biggest ancient architecture.",
+    location: "Northern China",
+    coordinates: {
+      lat: 40.4319,
+      lon: 116.5704
+    }
   }
 ];
 

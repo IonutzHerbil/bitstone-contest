@@ -1,15 +1,9 @@
 // Progress utility functions
-const API_BASE_URL = 'http://localhost:5000/api/auth';
 
-// Save game progress to both server and local storage
+// Save game progress to local storage without server calls
 export const saveGameProgress = async (gameId, completedLocations, isCompleted = false) => {
   try {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      throw new Error('No authentication token found');
-    }
-
-    // First, get the current user data
+    // Get the current user data
     const userData = JSON.parse(localStorage.getItem('user'));
     if (!userData) {
       throw new Error('No user data found');
@@ -25,21 +19,7 @@ export const saveGameProgress = async (gameId, completedLocations, isCompleted =
       }))
     };
 
-    // Save to server
-    const response = await fetch('http://localhost:5000/api/auth/progress', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify(progressData),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to save progress to server');
-    }
-
-    // Update local storage
+    // Update user data in localStorage
     const gameProgressIndex = userData.gameProgress?.findIndex(g => g.gameId === gameId) ?? -1;
     
     if (gameProgressIndex >= 0) {
@@ -64,70 +44,39 @@ export const saveGameProgress = async (gameId, completedLocations, isCompleted =
     // Also save to a separate localStorage item for redundancy
     const localProgress = JSON.parse(localStorage.getItem('gameProgress') || '{}');
     localProgress[gameId] = {
-      ...progressData,
       completed: isCompleted,
+      completedLocations,
       lastUpdated: new Date().toISOString()
     };
     localStorage.setItem('gameProgress', JSON.stringify(localProgress));
-
-    // Dispatch update event
+    
+    // Dispatch a custom event to notify components of the update
     window.dispatchEvent(new Event('userDataUpdate'));
 
-    return userData.gameProgress;
+    return true;
   } catch (error) {
-    console.error('Error saving progress:', error);
-    // Still update localStorage even if server save fails
-    try {
-      const userData = JSON.parse(localStorage.getItem('user'));
-      if (!userData) return;
-
-      // Update user data in localStorage
-      const gameProgressIndex = userData.gameProgress?.findIndex(g => g.gameId === gameId) ?? -1;
-      const updatedProgress = {
-        gameId,
-        completed: isCompleted,
-        completedLocations: completedLocations.map(locId => ({
-          locationId: locId,
-          timestamp: new Date()
-        }))
-      };
-
-      if (gameProgressIndex >= 0) {
-        userData.gameProgress[gameProgressIndex] = {
-          ...userData.gameProgress[gameProgressIndex],
-          ...updatedProgress
-        };
-      } else {
-        if (!userData.gameProgress) {
-          userData.gameProgress = [];
-        }
-        userData.gameProgress.push(updatedProgress);
-      }
-
-      localStorage.setItem('user', JSON.stringify(userData));
-
-      // Update separate localStorage item
-      const localProgress = JSON.parse(localStorage.getItem('gameProgress') || '{}');
-      localProgress[gameId] = {
-        ...updatedProgress,
-        lastUpdated: new Date().toISOString()
-      };
-      localStorage.setItem('gameProgress', JSON.stringify(localProgress));
-
-      // Dispatch update event
-      window.dispatchEvent(new Event('userDataUpdate'));
-
-      return userData.gameProgress;
-    } catch (localError) {
-      console.error('Error updating local storage:', localError);
-    }
+    console.error('Error saving game progress:', error);
+    return false;
   }
 };
 
-// Load game progress from both server and local storage
+// Get game progress from local storage
+export const getGameProgress = (gameId) => {
+  try {
+    const userData = JSON.parse(localStorage.getItem('user'));
+    if (!userData || !userData.gameProgress) return null;
+    
+    return userData.gameProgress.find(g => g.gameId === gameId);
+  } catch (error) {
+    console.error('Error getting game progress:', error);
+    return null;
+  }
+};
+
+// Load game progress from local storage only
 export const loadGameProgress = async (gameId) => {
   try {
-    // First try to get from localStorage
+    // Get from localStorage
     const localProgress = JSON.parse(localStorage.getItem('gameProgress') || '{}')[gameId];
     const userData = JSON.parse(localStorage.getItem('user'));
     const userProgress = userData?.gameProgress?.find(g => g.gameId === gameId);
@@ -137,37 +86,12 @@ export const loadGameProgress = async (gameId) => {
       return localProgress || userProgress;
     }
 
-    // If no local progress, try server
-    const token = localStorage.getItem('token');
-    if (!token) {
-      return {
-        gameId,
-        completed: false,
-        completedLocations: []
-      };
-    }
-
-    const response = await fetch(`${API_BASE_URL}/progress/${gameId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to load progress from server');
-    }
-
-    const progress = await response.json();
-    
-    // Save the server progress locally
-    const allLocalProgress = JSON.parse(localStorage.getItem('gameProgress') || '{}');
-    allLocalProgress[gameId] = {
-      ...progress,
-      lastUpdated: new Date().toISOString()
+    // If no progress found, return default empty progress
+    return {
+      gameId,
+      completed: false,
+      completedLocations: []
     };
-    localStorage.setItem('gameProgress', JSON.stringify(allLocalProgress));
-
-    return progress;
   } catch (error) {
     console.error('Error loading progress:', error);
     // Return default progress if everything fails
