@@ -100,8 +100,9 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
     try {
       console.log('Calling OpenAI API...');
       console.log('Using model: gpt-4o');
-      // Call OpenAI API to analyze the image
-      const response = await openai.chat.completions.create({
+      
+      // First call - Basic identification with JSON format
+      const identificationResponse = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [
           {
@@ -123,14 +124,14 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
         max_tokens: 500,
         temperature: 0.5,
       });
-      console.log('OpenAI API response received');
+      console.log('OpenAI API identification response received');
 
       // Parse the response
       let locationInfo;
       try {
-        console.log('Raw OpenAI response:', response.choices[0].message.content);
+        console.log('Raw OpenAI response:', identificationResponse.choices[0].message.content);
         // Clean up markdown formatting from the response
-        let content = response.choices[0].message.content;
+        let content = identificationResponse.choices[0].message.content;
         
         // Remove markdown code blocks if present
         if (content.includes('```')) {
@@ -144,12 +145,39 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
         console.log('Parsed location info:', locationInfo);
       } catch (parseError) {
         console.error('Error parsing OpenAI response:', parseError);
-        console.error('Raw content:', response.choices[0].message.content);
+        console.error('Raw content:', identificationResponse.choices[0].message.content);
         return res.status(500).json({ 
           error: 'Invalid response format from OpenAI',
           details: parseError.message
         });
       }
+      
+      // Second call - Get enhanced description
+      const enhancedResponse = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: `Please provide a detailed, rich description of the ${locationInfo.name} in ${locationInfo.location}. Include historical significance, architectural features, cultural importance, interesting facts, and any visitor information that would be helpful. The description should be informative, engaging, and around 300-500 words.`,
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: `data:${req.file.mimetype};base64,${base64Image}`
+                }
+              },
+            ],
+          },
+        ],
+        max_tokens: 1000,
+        temperature: 0.7,
+      });
+      
+      const enhancedDescription = enhancedResponse.choices[0].message.content;
+      console.log('Enhanced description generated');
       
       // Get coordinates
       console.log('Getting coordinates for:', locationInfo.name, locationInfo.location);
@@ -166,12 +194,15 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
         id: locationId,
         name: locationInfo.name,
         description: locationInfo.description,
+        enhancedDescription: enhancedDescription,
         location: locationInfo.location,
         coordinates: coordinates,
         imageUrl: imageUrl,
         difficulty: 'medium',
+        userNotes: "", // Empty string for user notes
+        dateAdded: new Date().toISOString()
       };
-      console.log('Sending response:', { ...responseData, imageUrl: '[truncated]' });
+      console.log('Sending response:', { ...responseData, imageUrl: '[truncated]', enhancedDescription: '[truncated]' });
 
       res.json(responseData);
     } catch (openaiError) {
@@ -299,6 +330,46 @@ app.get('/api/auth/progress/:gameId', (req, res) => {
     completed: false,
     completedLocations: [],
     score: 0
+  });
+});
+
+// Add endpoint to update user notes for a location
+app.post('/api/location-notes', express.json(), (req, res) => {
+  const { locationId, notes } = req.body;
+  
+  if (!locationId) {
+    return res.status(400).json({ error: 'Location ID is required' });
+  }
+  
+  console.log(`Updating notes for location ${locationId}: ${notes}`);
+  
+  // In a real application, you would save this to a database
+  // For now, we'll just return success
+  res.json({ 
+    success: true, 
+    message: 'Notes updated successfully',
+    locationId,
+    notes
+  });
+});
+
+// Add endpoint to share a location with others
+app.post('/api/share-location', express.json(), (req, res) => {
+  const { locationId, shareMethod } = req.body;
+  
+  if (!locationId) {
+    return res.status(400).json({ error: 'Location ID is required' });
+  }
+  
+  console.log(`Sharing location ${locationId} via ${shareMethod}`);
+  
+  // Generate a share URL (this would be more sophisticated in a real app)
+  const shareUrl = `http://localhost:3000/shared-location/${locationId}`;
+  
+  res.json({ 
+    success: true, 
+    message: 'Location shared successfully',
+    shareUrl
   });
 });
 
