@@ -1,14 +1,28 @@
 # Cluj-Napoca Landmark Detector
 
-This web application allows users to upload photos of landmarks in Cluj-Napoca and uses ChatGPT's vision capabilities to identify the location and provide information about it. The app also uses geolocation to verify the user's current location.
+This web application has two main functionalities: a Location Explorer for landmark identification and a Photo Game for testing your knowledge of Cluj-Napoca landmarks. It uses ChatGPT's vision capabilities to identify locations and provides information about them. The app also uses geolocation to verify the user's current location.
 
 ## Features
 
+- Two main modes: Location Explorer and Photo Game
 - Image upload and preview
 - Location detection
 - AI-powered image analysis using ChatGPT
 - Real-time location verification
 - Modern UI with Chakra UI
+- User authentication and progress tracking
+
+## Application Modes
+
+### Location Explorer
+This mode allows users to identify landmarks in Cluj-Napoca by uploading photos. The AI analyzes the image and provides information about the landmark, including its name, history, and significance.
+
+### Photo Game
+This interactive game challenges users to identify famous landmarks in Cluj-Napoca. Users are shown images of landmarks and must correctly identify them to earn points. The game includes:
+- Multiple difficulty levels
+- Score tracking
+- Leaderboard functionality
+- Educational information about each landmark
 
 ## Prerequisites
 
@@ -56,10 +70,18 @@ Alternatively, you can run both frontend and backend concurrently:
 
 ## Usage
 
+### Location Explorer
 1. Allow location access when prompted by your browser
-2. Click "Select Image" to choose a photo of a landmark in Cluj-Napoca
-3. Click "Analyze Image" to upload and process the image
-4. The app will display the AI's analysis of the landmark and verify your location
+2. Select "Location Explorer" from the main menu
+3. Click "Select Image" to choose a photo of a landmark in Cluj-Napoca
+4. Click "Analyze Image" to upload and process the image
+5. The app will display the AI's analysis of the landmark and verify your location
+
+### Photo Game
+1. Select "Photo Game" from the main menu
+2. Choose a difficulty level
+3. View the presented landmark image and select the correct name from the options
+4. Track your score and compare with other users on the leaderboard
 
 ## Note
 
