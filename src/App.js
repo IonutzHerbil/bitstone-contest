@@ -11,6 +11,7 @@ import PhotoGame from './components/PhotoGame';
 import GameSelector from './components/GameSelector';
 import LocationExplorer from './components/LocationExplorer';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import { gameTypes } from './data/gameTypes';
 
 const theme = extendTheme({
@@ -499,6 +500,7 @@ function App() {
               }
             />
           </Routes>
+          <Footer />
         </Box>
       </Router>
     </ChakraProvider>
