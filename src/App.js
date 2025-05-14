@@ -13,6 +13,7 @@ import LocationExplorer from './components/LocationExplorer';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Profile from './components/Profile';
+import About from './components/About';
 import { gameTypes } from './data/gameTypes';
 
 const theme = extendTheme({
@@ -157,10 +158,13 @@ function App() {
 
   // Add state for Profile and About modals
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-
+  const [isAboutOpen, setIsAboutOpen] = useState(false);
+  
   // Modal control functions
   const onOpenProfile = () => setIsProfileOpen(true);
   const onCloseProfile = () => setIsProfileOpen(false);
+  const onOpenAbout = () => setIsAboutOpen(true);
+  const onCloseAbout = () => setIsAboutOpen(false);
 
   useEffect(() => {
     // Check for existing user session
@@ -473,6 +477,7 @@ function App() {
                       onViewChange={handleViewChange}
                       currentView={currentView}
                       onOpenProfile={onOpenProfile}
+                      onOpenAbout={onOpenAbout}
                     />
                     <Container maxW="container.xl" py={8} flex="1">
                       {renderContent()}
@@ -486,6 +491,12 @@ function App() {
                       user={user}
                       completedGames={completedGames}
                       totalGames={gameTypes.length}
+                    />
+                    
+                    {/* About Modal */}
+                    <About 
+                      isOpen={isAboutOpen} 
+                      onClose={onCloseAbout} 
                     />
                   </>
                 ) : (
@@ -504,6 +515,7 @@ function App() {
                       onViewChange={handleViewChange}
                       currentView="game"
                       onOpenProfile={onOpenProfile}
+                      onOpenAbout={onOpenAbout}
                     />
                     <Container maxW="container.xl" py={8} flex="1">
                       <GameRoute
@@ -524,6 +536,11 @@ function App() {
                       totalGames={gameTypes.length}
                     />
                     
+                    {/* About Modal */}
+                    <About 
+                      isOpen={isAboutOpen} 
+                      onClose={onCloseAbout} 
+                    />
                   </>
                 ) : (
                   <Navigate to="/login" replace />
