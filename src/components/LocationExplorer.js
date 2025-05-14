@@ -48,13 +48,6 @@ const LocationExplorer = () => {
     if (selectedTab === 1) {
       // Update the refresh key to force a re-render of the collection component
       setRefreshKey(prevKey => prevKey + 1);
-      
-      toast({
-        title: 'Collection refreshed',
-        status: 'info',
-        duration: 1500,
-        isClosable: true,
-      });
     }
   }, [selectedTab, toast]);
 

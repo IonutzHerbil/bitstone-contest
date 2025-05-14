@@ -49,13 +49,6 @@ const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading }
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-    
-    toast({
-      title: 'Photo deleted',
-      status: 'info',
-      duration: 2000,
-      isClosable: true,
-    });
   };
 
   const uploadImage = async () => {
@@ -89,7 +82,15 @@ const ImageUploader = ({ onUpload, onPhotoAnalyzed, isLoading: externalLoading }
         onPhotoAnalyzed(response.data.analysis);
       }
 
-      handleDeleteImage();
+      // Clear the image after successful processing
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+      setSelectedImage(null);
+      setPreviewUrl(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     } catch (error) {
       console.error('Error uploading image:', error);
       toast({

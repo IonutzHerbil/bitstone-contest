@@ -220,47 +220,248 @@ const LocationDisplay = ({ location, showSaveButton = false }) => {
             <Icon as={FaInfoCircle} color="cyan.400" boxSize={5} />
             <Heading size="sm" color="white">About this Location</Heading>
           </HStack>
-          <Text color="gray.300" fontSize="md" lineHeight="tall">
+          <Text color="gray.300" fontSize="md" lineHeight="tall" mb={4}>
             {location.description}
           </Text>
+          
+          {/* Additional information sections */}
+          <Divider my={4} borderColor="gray.600" />
+          
+          {location.historicalContext && (
+            <Box mb={4}>
+              <Heading size="xs" color="cyan.300" mb={2}>Historical Context</Heading>
+              <Text color="gray.300" fontSize="sm" lineHeight="tall">
+                {location.historicalContext}
+              </Text>
+            </Box>
+          )}
+          
+          {location.architecturalDetails && (
+            <Box mb={4}>
+              <Heading size="xs" color="cyan.300" mb={2}>Architectural Details</Heading>
+              <Text color="gray.300" fontSize="sm" lineHeight="tall">
+                {location.architecturalDetails}
+              </Text>
+            </Box>
+          )}
+          
+          {location.culturalSignificance && (
+            <Box mb={4}>
+              <Heading size="xs" color="cyan.300" mb={2}>Cultural Significance</Heading>
+              <Text color="gray.300" fontSize="sm" lineHeight="tall">
+                {location.culturalSignificance}
+              </Text>
+            </Box>
+          )}
+          
+          {location.visitorInfo && (
+            <Box>
+              <Heading size="xs" color="cyan.300" mb={2}>Visitor Information</Heading>
+              <Text color="gray.300" fontSize="sm" lineHeight="tall">
+                {location.visitorInfo}
+              </Text>
+            </Box>
+          )}
+          
+          {/* Additional information rows */}
+          <Divider my={4} borderColor="gray.600" />
+          
+          <Grid templateColumns={{ base: "1fr", md: "1fr 1fr" }} gap={4} mt={4}>
+            {location.constructionYear && (
+              <Box p={3} bg="gray.800" borderRadius="md" borderWidth="1px" borderColor="gray.600">
+                <Heading size="xs" color="cyan.300" mb={2}>Year of Construction</Heading>
+                <Text color="gray.300" fontSize="sm">{location.constructionYear}</Text>
+              </Box>
+            )}
+            
+            {location.architect && (
+              <Box p={3} bg="gray.800" borderRadius="md" borderWidth="1px" borderColor="gray.600">
+                <Heading size="xs" color="cyan.300" mb={2}>Architect/Builder</Heading>
+                <Text color="gray.300" fontSize="sm">{location.architect}</Text>
+              </Box>
+            )}
+            
+            {location.style && (
+              <Box p={3} bg="gray.800" borderRadius="md" borderWidth="1px" borderColor="gray.600">
+                <Heading size="xs" color="cyan.300" mb={2}>Architectural Style</Heading>
+                <Text color="gray.300" fontSize="sm">{location.style}</Text>
+              </Box>
+            )}
+            
+            {location.openingHours && (
+              <Box p={3} bg="gray.800" borderRadius="md" borderWidth="1px" borderColor="gray.600">
+                <Heading size="xs" color="cyan.300" mb={2}>Opening Hours</Heading>
+                <Text color="gray.300" fontSize="sm">{location.openingHours}</Text>
+              </Box>
+            )}
+            
+            {location.entryFee && (
+              <Box p={3} bg="gray.800" borderRadius="md" borderWidth="1px" borderColor="gray.600">
+                <Heading size="xs" color="cyan.300" mb={2}>Entry Fee</Heading>
+                <Text color="gray.300" fontSize="sm">{location.entryFee}</Text>
+              </Box>
+            )}
+            
+            {location.accessibility && (
+              <Box p={3} bg="gray.800" borderRadius="md" borderWidth="1px" borderColor="gray.600">
+                <Heading size="xs" color="cyan.300" mb={2}>Accessibility</Heading>
+                <Text color="gray.300" fontSize="sm">{location.accessibility}</Text>
+              </Box>
+            )}
+            
+            {location.nearbyAttractions && (
+              <Box p={3} bg="gray.800" borderRadius="md" borderWidth="1px" borderColor="gray.600">
+                <Heading size="xs" color="cyan.300" mb={2}>Nearby Attractions</Heading>
+                <Text color="gray.300" fontSize="sm">{location.nearbyAttractions}</Text>
+              </Box>
+            )}
+            
+            {location.transportLinks && (
+              <Box p={3} bg="gray.800" borderRadius="md" borderWidth="1px" borderColor="gray.600">
+                <Heading size="xs" color="cyan.300" mb={2}>Transport Links</Heading>
+                <Text color="gray.300" fontSize="sm">{location.transportLinks}</Text>
+              </Box>
+            )}
+          </Grid>
         </Box>
 
         {/* Map section */}
-        {location.coordinates && (
+        <Box
+          borderRadius="lg"
+          overflow="hidden"
+          boxShadow="0 4px 12px rgba(0, 0, 0, 0.2)"
+          borderWidth="1px"
+          borderColor="gray.600"
+          position="relative"
+        >
           <Box
+            as="iframe"
+            src={`https://www.openstreetmap.org/export/embed.html?bbox=${
+              (location.coordinates ? location.coordinates.lon : 23.5891) - 0.005
+            },${
+              (location.coordinates ? location.coordinates.lat : 46.7692) - 0.005
+            },${
+              (location.coordinates ? location.coordinates.lon : 23.5891) + 0.005
+            },${
+              (location.coordinates ? location.coordinates.lat : 46.7692) + 0.005
+            }&layer=mapnik&marker=${
+              location.coordinates ? location.coordinates.lat : 46.7692
+            },${
+              location.coordinates ? location.coordinates.lon : 23.5891
+            }&zoom=${
+              location.mapProperties ? location.mapProperties.zoomLevel : 17
+            }`}
+            width="100%"
+            height="350px"
             borderRadius="lg"
-            overflow="hidden"
-            boxShadow="0 4px 12px rgba(0, 0, 0, 0.2)"
-            borderWidth="1px"
-            borderColor="gray.600"
-            position="relative"
+            border="none"
+          />
+          <HStack
+            position="absolute"
+            spacing={4}
+            bottom={3}
+            right={3}
           >
-            <Box
-              as="iframe"
-              src={`https://www.openstreetmap.org/export/embed.html?bbox=${location.coordinates.lon-0.01},${location.coordinates.lat-0.01},${location.coordinates.lon+0.01},${location.coordinates.lat+0.01}&layer=mapnik&marker=${location.coordinates.lat},${location.coordinates.lon}`}
-              width="100%"
-              height="300px"
-              borderRadius="lg"
-              border="none"
-            />
+            <Button
+              leftIcon={<ExternalLinkIcon />}
+              colorScheme="purple"
+              size="sm"
+              as="a"
+              href={`https://www.openstreetmap.org/?mlat=${
+                location.coordinates ? location.coordinates.lat : 46.7692
+              }&mlon=${
+                location.coordinates ? location.coordinates.lon : 23.5891
+              }&zoom=${
+                location.mapProperties ? location.mapProperties.zoomLevel : 17
+              }`}
+              target="_blank"
+              rel="noopener noreferrer"
+              bg="gray.800"
+              _hover={{
+                bg: "gray.700",
+              }}
+            >
+              View Full Map
+            </Button>
+          </HStack>
+          <Box
+            position="absolute"
+            top={3}
+            left={3}
+            bg="gray.800"
+            borderRadius="md"
+            px={3}
+            py={1}
+            fontSize="sm"
+            fontWeight="medium"
+            color="cyan.300"
+            boxShadow="0 2px 8px rgba(0, 0, 0, 0.3)"
+            display="flex"
+            alignItems="center"
+          >
+            <Icon as={FaMapMarkerAlt} mr={2} />
+            <Text>{location.name}</Text>
+          </Box>
+          
+          {/* Show a message when default coordinates are used */}
+          {!location.coordinates && (
             <Box
               position="absolute"
-              top={3}
+              top={12}
               left={3}
-              bg="gray.800"
+              bg="yellow.800"
               borderRadius="md"
               px={3}
               py={1}
-              fontSize="sm"
+              fontSize="xs"
               fontWeight="medium"
-              color="cyan.300"
+              color="yellow.300"
               boxShadow="0 2px 8px rgba(0, 0, 0, 0.3)"
               display="flex"
               alignItems="center"
             >
-              <Icon as={FaMapMarkerAlt} mr={2} />
-              <Text>Interactive Map</Text>
+              <InfoIcon mr={2} />
+              <Text>Showing approximate location</Text>
             </Box>
+          )}
+        </Box>
+
+        {/* Nearby Points of Interest section */}
+        {location.mapProperties && location.mapProperties.pointsOfInterest && (
+          <Box
+            bg="gray.700"
+            p={5}
+            borderRadius="lg"
+            boxShadow="0 4px 12px rgba(0, 0, 0, 0.1)"
+            borderWidth="1px"
+            borderColor="gray.600"
+          >
+            <HStack spacing={3} mb={3} align="center">
+              <Icon as={FaMapMarkerAlt} color="purple.400" boxSize={5} />
+              <Heading size="sm" color="white">Nearby Attractions</Heading>
+            </HStack>
+            <Grid templateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }} gap={4}>
+              {location.mapProperties.pointsOfInterest.map((poi, index) => (
+                <Box
+                  key={index}
+                  p={3}
+                  bg="gray.800"
+                  borderRadius="md"
+                  borderWidth="1px"
+                  borderColor="gray.600"
+                  transition="all 0.3s"
+                  _hover={{
+                    transform: "translateY(-2px)",
+                    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.2)",
+                  }}
+                >
+                  <HStack spacing={2}>
+                    <Icon as={FaMapMarkerAlt} color="cyan.300" />
+                    <Text color="gray.300" fontSize="sm">{poi}</Text>
+                  </HStack>
+                </Box>
+              ))}
+            </Grid>
           </Box>
         )}
 
@@ -339,20 +540,23 @@ const LocationDisplay = ({ location, showSaveButton = false }) => {
             </Button>
           )}
           
-          {location.coordinates && (
-            <Button
-              leftIcon={<ExternalLinkIcon />}
-              colorScheme="purple"
-              variant="outline"
-              size="md"
-              as="a"
-              href={`https://www.openstreetmap.org/?mlat=${location.coordinates.lat}&mlon=${location.coordinates.lon}&zoom=16`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              View on OpenStreetMap
-            </Button>
-          )}
+          <Button
+            leftIcon={<ExternalLinkIcon />}
+            colorScheme="purple"
+            variant="outline"
+            size="md"
+            as="a"
+            href={`https://www.google.com/maps/search/?api=1&query=${
+              location.coordinates ? location.coordinates.lat : 46.7692
+            },${
+              location.coordinates ? location.coordinates.lon : 23.5891
+            }`}
+            target="_blank"
+            rel="noopener noreferrer"
+            mt={2}
+          >
+            View on Google Maps
+          </Button>
         </Grid>
       </VStack>
     </Box>

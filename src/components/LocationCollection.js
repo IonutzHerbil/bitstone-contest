@@ -116,12 +116,6 @@ const LocationCollection = () => {
         setSavedLocations(updatedLocations);
         localStorage.setItem('savedLocations', JSON.stringify(updatedLocations));
       }
-      
-      toast({
-        title: 'Location removed',
-        status: 'info',
-        duration: 2000,
-      });
     } catch (err) {
       console.error('Error deleting location:', err);
       toast({

@@ -45,13 +45,117 @@ app.use('/api/auth', authRoutes);
 // Helper function to get coordinates from location name
 async function getCoordinates(locationName) {
   try {
-    const response = await axios.get(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationName)}&format=json&limit=1`);
-    if (response.data && response.data.length > 0) {
-      return {
-        lat: parseFloat(response.data[0].lat),
-        lon: parseFloat(response.data[0].lon),
-      };
+    console.log('Searching for coordinates with query:', locationName);
+    
+    // Check for known landmarks first
+    const knownLandmarks = {
+      "St. Michael's Church": { lat: 46.7694, lon: 23.5909 },
+      "Matthias Corvinus Statue": { lat: 46.7693, lon: 23.5900 },
+      "Central Park Cluj-Napoca": { lat: 46.7689, lon: 23.5786 },
+      "Botanical Garden": { lat: 46.7612, lon: 23.5882 },
+      "Babeș-Bolyai University": { lat: 46.7667, lon: 23.5898 },
+      "Orthodox Cathedral": { lat: 46.7713, lon: 23.5968 },
+      "National Theatre": { lat: 46.7704, lon: 23.5966 },
+      "Union Square": { lat: 46.7690, lon: 23.5907 },
+      "Museum Square": { lat: 46.7705, lon: 23.5875 },
+      "Tailors' Bastion": { lat: 46.7711, lon: 23.5870 },
+      "Avram Iancu Square": { lat: 46.7716, lon: 23.5965 },
+      "Cetatuia Hill": { lat: 46.7787, lon: 23.5863 },
+      "Unirii Square": { lat: 46.7692, lon: 23.5891 },
+      "Dormition Cathedral": { lat: 46.7714, lon: 23.5967 },
+      "Alexandru Borza Botanical Garden": { lat: 46.7612, lon: 23.5882 },
+      "Casino Cluj": { lat: 46.7688, lon: 23.5790 },
+      "Piata Avram Iancu": { lat: 46.7716, lon: 23.5965 },
+      "Piata Unirii": { lat: 46.7692, lon: 23.5891 },
+      "Bánffy Palace": { lat: 46.7696, lon: 23.5898 },
+      "Reformed Church": { lat: 46.7702, lon: 23.5881 },
+      "Romanian National Opera": { lat: 46.7703, lon: 23.5966 },
+      "Cluj Arena": { lat: 46.7661, lon: 23.5701 },
+    };
+    
+    // Check if the location name or part of it matches a known landmark
+    for (const [landmark, coords] of Object.entries(knownLandmarks)) {
+      if (locationName.toLowerCase().includes(landmark.toLowerCase()) || 
+          landmark.toLowerCase().includes(locationName.toLowerCase())) {
+        console.log(`Found coordinates for known landmark: ${landmark}`);
+        return coords;
+      }
     }
+    
+    // If it's an exact match for a known landmark
+    if (knownLandmarks[locationName]) {
+      console.log(`Found exact match for known landmark: ${locationName}`);
+      return knownLandmarks[locationName];
+    }
+    
+    // First try with the full location name and specify Cluj-Napoca, Romania
+    let searchQuery = `${locationName}, Cluj-Napoca, Romania`;
+    let response = await axios.get(`https://nominatim.openstreetmap.org/search`, {
+      params: {
+        q: searchQuery,
+        format: 'json',
+        limit: 1,
+        addressdetails: 1,
+        'accept-language': 'en',
+      },
+      headers: {
+        'User-Agent': 'ClujLandmarksApp/1.0'
+      }
+    });
+    
+    // If we got results, return them
+    if (response.data && response.data.length > 0) {
+      // Check if the result is actually in Cluj-Napoca
+      const address = response.data[0].address || {};
+      if (address.city === 'Cluj-Napoca' || 
+          address.town === 'Cluj-Napoca' || 
+          address.county === 'Cluj' ||
+          (address.state && address.state.includes('Cluj'))) {
+        console.log('Found coordinates with full query:', searchQuery);
+        return {
+          lat: parseFloat(response.data[0].lat),
+          lon: parseFloat(response.data[0].lon),
+        };
+      } else {
+        console.log('Coordinates found but not in Cluj-Napoca, ignoring:', response.data[0]);
+      }
+    }
+    
+    // Try just the landmark name without location qualifiers
+    const simplifiedName = locationName.split(',')[0].trim();
+    searchQuery = `${simplifiedName}, Cluj-Napoca`;
+    response = await axios.get(`https://nominatim.openstreetmap.org/search`, {
+      params: {
+        q: searchQuery,
+        format: 'json',
+        limit: 1,
+        addressdetails: 1,
+        countrycodes: 'ro',
+        'accept-language': 'en',
+      },
+      headers: {
+        'User-Agent': 'ClujLandmarksApp/1.0'
+      }
+    });
+    
+    if (response.data && response.data.length > 0) {
+      // Check if the result is actually in Cluj-Napoca
+      const address = response.data[0].address || {};
+      if (address.city === 'Cluj-Napoca' || 
+          address.town === 'Cluj-Napoca' || 
+          address.county === 'Cluj' ||
+          (address.state && address.state.includes('Cluj'))) {
+        console.log('Found coordinates with simplified query:', searchQuery);
+        return {
+          lat: parseFloat(response.data[0].lat),
+          lon: parseFloat(response.data[0].lon),
+        };
+      } else {
+        console.log('Coordinates found but not in Cluj-Napoca, ignoring:', response.data[0]);
+      }
+    }
+    
+    console.log('No coordinates found for:', locationName);
     return null;
   } catch (error) {
     console.error('Error getting coordinates:', error.message);
@@ -88,14 +192,14 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
         messages: [
           {
             role: "system",
-            content: "You are a landmark identification system for Cluj-Napoca, Romania. You only respond with valid, structured JSON objects matching the exact format requested. Focus on identifying landmarks, monuments, buildings, and locations specifically from Cluj-Napoca."
+            content: "You are a landmark identification system for Cluj-Napoca, Romania. You only respond with valid, structured JSON objects matching the exact format requested. Focus on identifying landmarks, monuments, buildings, and locations specifically from Cluj-Napoca. Provide detailed, accurate, and comprehensive information."
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Look at this image and identify the landmark or location. Respond ONLY with a single JSON object in this exact format: {\"name\": \"landmark name\", \"description\": \"brief factual description\", \"location\": \"city, country\"}. Keep description under 100 words. No other text, no explanations, just the JSON."
+                text: "Look at this image and identify the landmark or location in Cluj-Napoca. Respond ONLY with a single JSON object with the following fields:\n\n- name: landmark name\n- description: brief overview (100-150 words)\n- location: specific area in Cluj-Napoca\n- historicalContext: brief history (50-100 words)\n- architecturalDetails: description of architectural elements (50-100 words)\n- culturalSignificance: importance to local culture (50-100 words)\n- visitorInfo: practical information for visitors\n- constructionYear: year or period of construction\n- architect: name of architect/builder if known\n- style: architectural style\n- openingHours: typical opening hours if applicable\n- entryFee: cost of entry if applicable\n- accessibility: accessibility information\n- nearbyAttractions: notable places nearby\n- transportLinks: how to get there\n\nKeep all text concise but informative. No other text, no explanations, just the JSON."
               },
               {
                 type: "image_url",
@@ -106,7 +210,7 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
             ],
           },
         ],
-        max_tokens: 500,
+        max_tokens: 1000,
         response_format: { type: "json_object" },
         temperature: 0.3,
       });
@@ -136,15 +240,43 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
         locationInfo = {
           name: "Unidentified Landmark",
           description: "This appears to be an interesting location that couldn't be specifically identified.",
-          location: "Unknown Location"
+          location: "Cluj-Napoca, Romania",
+          historicalContext: "Historical information is not available for this location.",
+          architecturalDetails: "Architectural details could not be determined from the provided image.",
+          culturalSignificance: "Cultural significance information is not available.",
+          visitorInfo: "Contact local tourism office for visitor information.",
+          constructionYear: "Unknown",
+          architect: "Unknown",
+          style: "Unknown architectural style",
+          openingHours: "Not available",
+          entryFee: "Not available",
+          accessibility: "Information not available",
+          nearbyAttractions: "Explore the historic center of Cluj-Napoca nearby",
+          transportLinks: "Accessible via public transportation in Cluj-Napoca"
         };
         console.log('Created fallback location info:', locationInfo);
       }
       
       // Get coordinates
       console.log('Getting coordinates for:', locationInfo.name, locationInfo.location);
-      const coordinates = await getCoordinates(locationInfo.name + " " + locationInfo.location);
+      let coordinates = await getCoordinates(locationInfo.name + " " + locationInfo.location);
       console.log('Coordinates:', coordinates);
+      
+      // If coordinates couldn't be found, use default coordinates for Cluj-Napoca central point
+      if (!coordinates) {
+        coordinates = {
+          lat: 46.7692, // Union Square (Piața Unirii) coordinates
+          lon: 23.5891
+        };
+        console.log('Using default Cluj-Napoca coordinates (Union Square):', coordinates);
+      }
+      
+      // Add map-specific properties
+      const mapProperties = {
+        zoomLevel: determineZoomLevel(locationInfo),
+        mapType: determineMapType(locationInfo),
+        pointsOfInterest: nearbyPointsOfInterest(locationInfo.name, coordinates)
+      };
       
       // Generate a unique ID for the location
       const locationId = Math.random().toString(36).substr(2, 9);
@@ -158,8 +290,21 @@ app.post('/api/detect-location', upload.single('image'), async (req, res) => {
         description: locationInfo.description,
         location: locationInfo.location,
         coordinates: coordinates,
+        mapProperties: mapProperties,
         imageUrl: imageUrl,
         difficulty: 'medium',
+        historicalContext: locationInfo.historicalContext || null,
+        architecturalDetails: locationInfo.architecturalDetails || null,
+        culturalSignificance: locationInfo.culturalSignificance || null,
+        visitorInfo: locationInfo.visitorInfo || null,
+        constructionYear: locationInfo.constructionYear || null,
+        architect: locationInfo.architect || null,
+        style: locationInfo.style || null,
+        openingHours: locationInfo.openingHours || null,
+        entryFee: locationInfo.entryFee || null,
+        accessibility: locationInfo.accessibility || null,
+        nearbyAttractions: locationInfo.nearbyAttractions || null,
+        transportLinks: locationInfo.transportLinks || null
       };
       console.log('Sending response:', { ...responseData, imageUrl: '[truncated]' });
 
@@ -357,6 +502,75 @@ app.post('/api/test-vision', upload.single('image'), async (req, res) => {
     });
   }
 });
+
+// Helper function to determine appropriate zoom level based on location type
+function determineZoomLevel(locationInfo) {
+  // Default zoom level for city landmarks
+  let zoomLevel = 17;
+  
+  const name = locationInfo.name.toLowerCase();
+  const description = locationInfo.description.toLowerCase();
+  
+  // Larger areas need a wider view
+  if (
+    name.includes('square') || 
+    name.includes('park') || 
+    name.includes('garden') ||
+    description.includes('square') || 
+    description.includes('park') || 
+    description.includes('garden')
+  ) {
+    zoomLevel = 16;
+  }
+  
+  // Buildings need a closer view
+  if (
+    name.includes('church') || 
+    name.includes('cathedral') || 
+    name.includes('building') ||
+    name.includes('house') ||
+    name.includes('museum') ||
+    description.includes('church') || 
+    description.includes('cathedral') || 
+    description.includes('building') ||
+    description.includes('house') ||
+    description.includes('museum')
+  ) {
+    zoomLevel = 18;
+  }
+  
+  return zoomLevel;
+}
+
+// Helper function to determine appropriate map type
+function determineMapType(locationInfo) {
+  // Default map type
+  return 'standard';
+}
+
+// Helper function to suggest nearby points of interest
+function nearbyPointsOfInterest(locationName, coordinates) {
+  // This would typically involve a database query, but for now we'll return some defaults
+  const clujLandmarks = {
+    "St. Michael's Church": ["Matthias Corvinus Statue", "National Museum of Art"],
+    "Matthias Corvinus Statue": ["St. Michael's Church", "Central Park Cluj-Napoca"],
+    "Central Park Cluj-Napoca": ["Casino", "Art Museum"],
+    "Botanical Garden": ["Alexandru Borza Botanical Garden Museum", "USAMV Cluj-Napoca"],
+    "Babeș-Bolyai University": ["National Theatre", "Central Park Cluj-Napoca"],
+    "Orthodox Cathedral": ["Avram Iancu Square", "National Theatre"],
+    "National Theatre": ["Orthodox Cathedral", "Avram Iancu Square"],
+    "Union Square": ["St. Michael's Church", "Museum Square"],
+    "Museum Square": ["Union Square", "Pharmacy Museum"],
+    "Tailors' Bastion": ["Museum Square", "Potaissa Street"]
+  };
+  
+  // Return nearby landmarks if we know them, otherwise return generic suggestions
+  if (clujLandmarks[locationName]) {
+    return clujLandmarks[locationName];
+  } else {
+    return ["Union Square", "St. Michael's Church", "Central Park Cluj-Napoca"];
+  }
+}
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
