@@ -26,19 +26,18 @@ import {
 } from '@chakra-ui/react';
 import { 
   HamburgerIcon, 
-  ChevronDownIcon, 
-  ExternalLinkIcon, 
-  CameraIcon, 
-  InfoIcon, 
-  SettingsIcon
+  ChevronDownIcon,
+  InfoIcon
 } from '@chakra-ui/icons';
-import { FaMapMarkedAlt, FaCamera, FaSignOutAlt, FaHome } from 'react-icons/fa';
+import { FaMapMarkedAlt, FaCamera, FaSignOutAlt, FaHome, FaUser } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
-const Navbar = ({ user, onLogout, onViewChange, currentView }) => {
+const Navbar = ({ user, onLogout, onViewChange, currentView, onOpenProfile, onOpenAbout }) => {
   const [isLargerThan768] = useMediaQuery('(min-width: 768px)');
   const { isOpen, onOpen, onClose } = useDisclosure();
   const bgGradient = "linear(to-r, gray.900, gray.800)";
   const activeBg = useColorModeValue('rgba(0, 255, 255, 0.15)', 'rgba(0, 255, 255, 0.15)');
+  const navigate = useNavigate();
   
   const getButtonProps = (viewName) => ({
     size: 'md',
@@ -164,7 +163,7 @@ const Navbar = ({ user, onLogout, onViewChange, currentView }) => {
                   zIndex={100}
                 >
                   <MenuItem
-                    icon={<SettingsIcon color="cyan.400" />}
+                    icon={<FaUser color="#4FD1C5" />}
                     fontSize="sm"
                     fontWeight="medium"
                     borderRadius="md"
@@ -173,6 +172,7 @@ const Navbar = ({ user, onLogout, onViewChange, currentView }) => {
                     color="white"
                     bg="transparent"
                     mb={1}
+                    onClick={onOpenProfile}
                     _hover={{ 
                       bgGradient: "linear(to-r, rgba(49, 151, 149, 0.2), rgba(76, 81, 191, 0.2))",
                       transform: 'translateX(2px)'
@@ -184,7 +184,7 @@ const Navbar = ({ user, onLogout, onViewChange, currentView }) => {
                       bgGradient: "linear(to-r, rgba(49, 151, 149, 0.2), rgba(76, 81, 191, 0.2))"
                     }}
                   >
-                    Settings
+                    Profile
                   </MenuItem>
                   <MenuItem
                     icon={<InfoIcon color="purple.400" />}
@@ -196,6 +196,7 @@ const Navbar = ({ user, onLogout, onViewChange, currentView }) => {
                     color="white"
                     bg="transparent"
                     mb={1}
+                    onClick={onOpenAbout}
                     _hover={{ 
                       bgGradient: "linear(to-r, rgba(49, 151, 149, 0.2), rgba(76, 81, 191, 0.2))",
                       transform: 'translateX(2px)'
@@ -207,7 +208,7 @@ const Navbar = ({ user, onLogout, onViewChange, currentView }) => {
                       bgGradient: "linear(to-r, rgba(49, 151, 149, 0.2), rgba(76, 81, 191, 0.2))"
                     }}
                   >
-                    Help
+                    About
                   </MenuItem>
                   <Box h="1px" bg="gray.700" my={1} />
                   <MenuItem
@@ -286,10 +287,14 @@ const Navbar = ({ user, onLogout, onViewChange, currentView }) => {
                         </Flex>
                         
                         <Button 
-                          leftIcon={<SettingsIcon color="cyan.400" />}
+                          leftIcon={<FaUser color="#4FD1C5" />}
                           justifyContent="flex-start"
                           bg="transparent"
                           color="white"
+                          onClick={() => {
+                            onClose();
+                            onOpenProfile();
+                          }}
                           _hover={{ 
                             bg: "linear-gradient(to right, rgba(49, 151, 149, 0.2), rgba(76, 81, 191, 0.2))",
                             transform: 'translateX(2px)'
@@ -299,13 +304,17 @@ const Navbar = ({ user, onLogout, onViewChange, currentView }) => {
                           borderRadius="md"
                           py={5}
                         >
-                          Settings
+                          Profile
                         </Button>
                         <Button 
                           leftIcon={<InfoIcon color="purple.400" />}
                           justifyContent="flex-start"
                           bg="transparent"
                           color="white"
+                          onClick={() => {
+                            onClose();
+                            onOpenAbout();
+                          }}
                           _hover={{ 
                             bg: "linear-gradient(to right, rgba(49, 151, 149, 0.2), rgba(76, 81, 191, 0.2))",
                             transform: 'translateX(2px)'
@@ -315,7 +324,7 @@ const Navbar = ({ user, onLogout, onViewChange, currentView }) => {
                           borderRadius="md"
                           py={5}
                         >
-                          Help
+                          About
                         </Button>
                         <Button 
                           leftIcon={<FaSignOutAlt color="#FC8181" />}
@@ -351,4 +360,4 @@ const Navbar = ({ user, onLogout, onViewChange, currentView }) => {
   );
 };
 
-export default Navbar; 
+export default Navbar;
