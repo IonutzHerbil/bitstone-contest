@@ -51,7 +51,7 @@ const Footer = ({ onViewChange }) => {
               letterSpacing="tight"
               textShadow="0 0 15px rgba(0, 255, 255, 0.3)"
             >
-              Photo Explorer
+              PoliPhotoQuest
             </Text>
             <Text color="gray.300" maxW="350px" textAlign={{ base: 'center', md: 'left' }} lineHeight="taller" fontSize="md">
               Explore Cluj-Napoca through an immersive photo adventure. Discover landmarks and capture memories.
@@ -150,7 +150,7 @@ const Footer = ({ onViewChange }) => {
           gap={4}
         >
           <Text>
-            © {currentYear} Photo Explorer. All rights reserved.
+            © {currentYear} PoliPhotoQuest. All rights reserved.
           </Text>
           <HStack spacing={6} justify="center">
             <ChakraLink 
