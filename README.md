@@ -27,9 +27,13 @@ This web application allows users to upload photos of landmarks in Cluj-Napoca a
 3. Create a `.env` file in the root directory with the following content:
    ```
    OPENAI_API_KEY=your_openai_api_key_here
+   MONGODB_URI=your_mongodb_connection_string
+   JWT_SECRET=your_secure_jwt_secret
    PORT=5000
    ```
    Replace `your_openai_api_key_here` with your actual OpenAI API key.
+   Replace `your_mongodb_connection_string` with your MongoDB connection URI.
+   Replace `your_secure_jwt_secret` with a secure random string for JWT token signing.
 
 ## Running the Application
 
@@ -44,6 +48,11 @@ This web application allows users to upload photos of landmarks in Cluj-Napoca a
    ```
 
 3. Open your browser and navigate to `http://localhost:3000`
+
+Alternatively, you can run both frontend and backend concurrently:
+   ```bash
+   npm run dev
+   ```
 
 ## Usage
 
