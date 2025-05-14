@@ -12,6 +12,7 @@ import GameSelector from './components/GameSelector';
 import LocationExplorer from './components/LocationExplorer';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import Profile from './components/Profile';
 import { gameTypes } from './data/gameTypes';
 
 const theme = extendTheme({
@@ -153,6 +154,13 @@ function App() {
   });
   const [currentView, setCurrentView] = useState('home'); // 'home', 'game', or 'explorer'
   const toast = useToast();
+
+  // Add state for Profile and About modals
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  // Modal control functions
+  const onOpenProfile = () => setIsProfileOpen(true);
+  const onCloseProfile = () => setIsProfileOpen(false);
 
   useEffect(() => {
     // Check for existing user session
@@ -432,7 +440,7 @@ function App() {
   return (
     <ChakraProvider theme={theme}>
       <Router>
-        <Box minH="100vh" bg="gray.900">
+        <Box minH="100vh" bg="gray.900" display="flex" flexDirection="column">
           <Routes>
             <Route
               path="/login"
@@ -464,10 +472,21 @@ function App() {
                       onLogout={handleLogout} 
                       onViewChange={handleViewChange}
                       currentView={currentView}
+                      onOpenProfile={onOpenProfile}
                     />
-                    <Container maxW="container.xl" py={8}>
+                    <Container maxW="container.xl" py={8} flex="1">
                       {renderContent()}
                     </Container>
+                    <Footer onViewChange={handleViewChange} />
+                    
+                    {/* Profile Modal */}
+                    <Profile 
+                      isOpen={isProfileOpen} 
+                      onClose={onCloseProfile} 
+                      user={user}
+                      completedGames={completedGames}
+                      totalGames={gameTypes.length}
+                    />
                   </>
                 ) : (
                   <Navigate to="/login" replace />
@@ -484,8 +503,9 @@ function App() {
                       onLogout={handleLogout}
                       onViewChange={handleViewChange}
                       currentView="game"
+                      onOpenProfile={onOpenProfile}
                     />
-                    <Container maxW="container.xl" py={8}>
+                    <Container maxW="container.xl" py={8} flex="1">
                       <GameRoute
                         onGameComplete={handleGameCompletion}
                         onLogout={handleLogout}
@@ -493,6 +513,17 @@ function App() {
                         onViewChange={handleViewChange}
                       />
                     </Container>
+                    <Footer onViewChange={handleViewChange} />
+                    
+                    {/* Profile Modal */}
+                    <Profile 
+                      isOpen={isProfileOpen} 
+                      onClose={onCloseProfile} 
+                      user={user}
+                      completedGames={completedGames}
+                      totalGames={gameTypes.length}
+                    />
+                    
                   </>
                 ) : (
                   <Navigate to="/login" replace />
@@ -500,11 +531,10 @@ function App() {
               }
             />
           </Routes>
-          <Footer />
         </Box>
       </Router>
     </ChakraProvider>
   );
 }
 
-export default App; 
+export default App;
